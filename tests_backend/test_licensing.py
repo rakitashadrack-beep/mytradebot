@@ -73,3 +73,15 @@ def test_production_refuses_manual_payments(monkeypatch):
     monkeypatch.setenv("PAYMENT_PROVIDER", "manual")
     with pytest.raises(RuntimeError, match="payment provider"):
         Settings()
+
+
+def test_production_rejects_placeholder_secrets(monkeypatch):
+    monkeypatch.setenv("MYTRADEBOT_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@host/database")
+    monkeypatch.setenv("JWT_SECRET", "replace-with-a-long-random-secret-min-32-chars")
+    monkeypatch.setenv("LICENSE_SIGNING_SECRET", "l" * 40)
+    monkeypatch.setenv("ADMIN_BOOTSTRAP_TOKEN", "a" * 40)
+    monkeypatch.setenv("PAYMENT_PROVIDER", "stripe")
+
+    with pytest.raises(RuntimeError, match="Production requires"):
+        Settings()
