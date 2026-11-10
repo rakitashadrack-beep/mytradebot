@@ -1,0 +1,35 @@
+# Desktop app — not needed on Vercel
+ui/
+main.py
+web/
+web_main.py
+core/
+installer/
+scripts/
+assets/
+
+# Tests and docs
+tests/
+tests_backend/
+docs/
+logs/
+
+# Local databases (never deploy these)
+*.db
+
+# Build artifacts
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Dev files
+.codex/
+.agents/
+.aws/
+pyproject.toml
+pytest.ini
+requirements-build-windows.txt
+requirements-windows.txt
