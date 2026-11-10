@@ -1,0 +1,14 @@
+[project]
+name = "mytradebot-licensing"
+version = "0.1.0"
+requires-python = ">=3.11,<3.15"
+dependencies = [
+  "fastapi>=0.118",
+  "psycopg[binary]>=3.2",
+  "PyJWT>=2.10",
+  "passlib[bcrypt]>=1.7",
+  "email-validator>=2.2"
+]
+
+[tool.vercel]
+entrypoint = "api.index:app"
