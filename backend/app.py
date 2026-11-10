@@ -37,10 +37,16 @@ class Settings:
         self.rate_limit_per_minute = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
         self.payment_provider = os.getenv("PAYMENT_PROVIDER", "manual")
         if self.environment == "production":
+            production_secrets = (
+                self.jwt_secret,
+                self.license_secret,
+                self.admin_bootstrap_token,
+            )
             insecure = (not self.database_url.startswith("postgresql") or self.payment_provider == "manual" or
                         len(self.jwt_secret) < 32 or len(self.license_secret) < 32 or
                         len(self.admin_bootstrap_token) < 32 or
                         len({self.jwt_secret, self.license_secret, self.admin_bootstrap_token}) < 3 or
+                        any("replace-with" in secret.lower() for secret in production_secrets) or
                         self.jwt_secret == "development-only-change-me")
             if insecure:
                 raise RuntimeError(
