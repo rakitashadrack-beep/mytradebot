@@ -1,0 +1,18 @@
+# Core dependencies (Python 3.11+). MetaTrader5 is added by requirements-windows.txt.
+PySide6>=6.10.1
+pandas>=2.2.2
+numpy>=1.26.4
+keyring>=25.2.1
+pytest>=8.2.2
+pytest-qt>=4.4.0
+
+# Backend / web
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+jinja2>=3.1.4
+pydantic[email]>=2.7.0
+PyJWT>=2.9.0
+bcrypt>=4.0.0
+
+# Windows only — install on your trading VPS/PC:
+# pip install MetaTrader5==5.0.45
