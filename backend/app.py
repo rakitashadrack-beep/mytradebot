@@ -465,6 +465,14 @@ def create_app(
             media_type="image/svg+xml",
         )
 
+    @app.get("/favicon.ico")
+    def favicon():
+        return FileResponse(
+            Path(__file__).parent / "static" / "icon.svg",
+            media_type="image/svg+xml",
+            headers={"Cache-Control": "public, max-age=604800"},
+        )
+
     @app.get("/service-worker.js")
     def pwa_service_worker():
         return FileResponse(
@@ -1231,6 +1239,7 @@ def _admin_html(users: int, active: int, pending: int, revoked: int, rows_html: 
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>MyTradeBot Admin</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml"/>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
 <style>

@@ -127,6 +127,7 @@ def test_pwa_assets_and_security_headers_are_served_over_loopback():
         home = client.get("/")
         manifest = client.get("/manifest.webmanifest")
         icon = client.get("/icons/icon-192.png")
+        favicon = client.get("/favicon.ico")
         service_worker = client.get("/service-worker.js")
         remote_host = client.get("/", headers={"Host": "attacker.example"})
 
@@ -136,6 +137,8 @@ def test_pwa_assets_and_security_headers_are_served_over_loopback():
     assert manifest.status_code == 200
     assert manifest.json()["display"] == "standalone"
     assert icon.status_code == 200 and icon.headers["content-type"] == "image/png"
+    assert favicon.status_code == 200
+    assert favicon.headers["content-type"] == "image/svg+xml"
     assert service_worker.status_code == 200
     assert service_worker.headers["service-worker-allowed"] == "/"
     assert remote_host.status_code == 421

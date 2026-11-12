@@ -170,6 +170,15 @@ def pwa_icon():
     return FileResponse(BASE / "static" / "icon.svg", media_type="image/svg+xml")
 
 
+@app.get("/favicon.ico")
+def favicon():
+    return FileResponse(
+        BASE / "static" / "icon.svg",
+        media_type="image/svg+xml",
+        headers={"Cache-Control": "public, max-age=604800"},
+    )
+
+
 @app.get("/icons/{icon_name}")
 def pwa_icon_png(icon_name: str):
     icons = {

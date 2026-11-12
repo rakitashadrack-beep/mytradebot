@@ -356,6 +356,7 @@ def test_pwa_shell_and_manifest_routes_are_present(tmp_path):
     app, _, _ = phone_service(tmp_path)
     root = endpoint(app, "/", "GET")()
     manifest = endpoint(app, "/manifest.webmanifest", "GET")()
+    favicon = endpoint(app, "/favicon.ico", "GET")()
     worker = endpoint(app, "/service-worker.js", "GET")()
     portal = root.path.read_text()
     service_worker = worker.path.read_text()
@@ -365,6 +366,7 @@ def test_pwa_shell_and_manifest_routes_are_present(tmp_path):
 
     assert str(root.path).endswith("backend/static/index.html")
     assert str(manifest.path).endswith("manifest.webmanifest")
+    assert str(favicon.path).endswith("backend/static/icon.svg")
     assert str(worker.path).endswith("service-worker.js")
     assert 'id="auth-form"' in portal
     assert 'id="auth-switch"' in portal
