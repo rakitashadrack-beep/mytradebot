@@ -4,32 +4,81 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import threading
 from queue import Empty, Full, Queue
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from backend.app import app as account_api
 from core.database import Database
-from core.licensing import LicenseManager
+from core.licensing import LicenseManager, device_id
 from core.mt5_bridge import MT5Bridge
 from core.risk import LotSizeMode, RiskEngine, RiskSettings
 from core.strategies import build_strategy
 from core.trading_engine import TradingConfig, TradingEngine
+from web.news import NewsDataError, get_nfp_cpi_events
 
 BASE = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
 
 app = FastAPI(title="MyTradeBot")
+app.mount("/account-api", account_api)
+
+
+@app.middleware("http")
+async def apply_browser_security_headers(request: Request, call_next):
+    if request.url.hostname not in {"127.0.0.1", "localhost", "::1"}:
+        return JSONResponse(
+            status_code=421,
+            content={"detail": "MyTradeBot control is restricted to this computer"},
+        )
+    origin = request.headers.get("origin")
+    if request.method not in {"GET", "HEAD", "OPTIONS"} and origin:
+        expected_origin = f"{request.url.scheme}://{request.headers.get('host', '').lower()}"
+        if origin.rstrip("/").lower() != expected_origin:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Cross-origin control requests are not allowed"},
+            )
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self'; "
+        "object-src 'none'; base-uri 'self'; form-action 'self'; "
+        "frame-ancestors 'none'; worker-src 'self'"
+    )
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
 
 # ── Shared state ──────────────────────────────────────────────────────────────
 bridge = MT5Bridge()
 db = Database()
+LOCAL_ACCOUNT_API_URL = os.getenv(
+    "MYTRADEBOT_LICENSE_API_URL",
+    "http://127.0.0.1:8000/account-api",
+).rstrip("/")
+if not db.get_setting("license_api_url", ""):
+    db.set_setting("license_api_url", LOCAL_ACCOUNT_API_URL)
 _engine: TradingEngine | None = None
 _engine_thread: threading.Thread | None = None
 _engine_stop = threading.Event()
@@ -100,7 +149,68 @@ def _run_engine_loop(
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={},
+    )
+
+
+@app.get("/manifest.webmanifest")
+def pwa_manifest():
+    return FileResponse(
+        BASE / "static" / "manifest.webmanifest",
+        media_type="application/manifest+json",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/icon.svg")
+def pwa_icon():
+    return FileResponse(BASE / "static" / "icon.svg", media_type="image/svg+xml")
+
+
+@app.get("/icons/{icon_name}")
+def pwa_icon_png(icon_name: str):
+    icons = {
+        "icon-192.png": "icon-192.png",
+        "icon-512.png": "icon-512.png",
+        "apple-touch-icon.png": "apple-touch-icon.png",
+    }
+    if icon_name not in icons:
+        raise HTTPException(status_code=404, detail="App icon not found")
+    return FileResponse(
+        BASE / "static" / "icons" / icons[icon_name],
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=604800, immutable"},
+    )
+
+
+@app.get("/service-worker.js")
+def pwa_service_worker():
+    return FileResponse(
+        BASE / "static" / "service-worker.js",
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
+    )
+
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "trading_host": "local"}
+
+
+@app.get("/api/device-id")
+def trading_device_id():
+    return {"device_id": device_id()}
+
+
+@app.get("/api/news/nfp-cpi")
+def nfp_cpi_news():
+    try:
+        return get_nfp_cpi_events(os.getenv("TRADING_ECONOMICS_API_KEY", ""))
+    except NewsDataError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 # ── Account ───────────────────────────────────────────────────────────────────
@@ -308,7 +418,9 @@ def get_performance():
 @app.get("/api/settings")
 def get_settings():
     d = RiskSettings()
-    return {n: db.get_setting(n, getattr(d, n)) for n in RiskSettings.__dataclass_fields__}
+    settings = {n: db.get_setting(n, getattr(d, n)) for n in RiskSettings.__dataclass_fields__}
+    settings["license_api_url"] = db.get_setting("license_api_url", LOCAL_ACCOUNT_API_URL)
+    return settings
 
 
 class SettingsSaveRequest(BaseModel):
@@ -323,18 +435,33 @@ class SettingsSaveRequest(BaseModel):
     max_weekly_loss_percent: float = 5.0
     max_spread_points: float = 30.0
     minimum_free_margin: float = 100.0
+    license_api_url: str = ""
 
 
 @app.post("/api/settings")
 def save_settings(req: SettingsSaveRequest):
     vals = req.model_dump()
     try:
-        s = RiskSettings(**{**vals, "lot_size_mode": LotSizeMode(vals["lot_size_mode"])})
+        risk_values = {
+            key: value
+            for key, value in vals.items()
+            if key in RiskSettings.__dataclass_fields__
+        }
+        s = RiskSettings(
+            **{
+                **risk_values,
+                "lot_size_mode": LotSizeMode(risk_values["lot_size_mode"]),
+            }
+        )
         s.validate()
     except (TypeError, ValueError) as exc:
         return {"ok": False, "error": str(exc)}
-    for k, v in vals.items():
+    license_api_url = vals["license_api_url"].strip().rstrip("/")
+    if license_api_url and not license_api_url.startswith(("https://", "http://127.0.0.1", "http://localhost")):
+        return {"ok": False, "error": "Use HTTPS for remote licensing services."}
+    for k, v in risk_values.items():
         db.set_setting(k, v)
+    db.set_setting("license_api_url", license_api_url or LOCAL_ACCOUNT_API_URL)
     return {"ok": True}
 
 

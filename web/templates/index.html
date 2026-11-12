@@ -3,21 +3,29 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#13131F"/>
+<meta name="description" content="MyTradeBot trading dashboard with account, charts, controls and news context."/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<link rel="manifest" href="/manifest.webmanifest"/>
+<link rel="icon" href="/icon.svg" type="image/svg+xml"/>
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"/>
 <title>MyTradeBot — Professional Trading Dashboard</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
 <style>
 :root {
-  --bg:       #0B1220;
-  --surface:  #111A2E;
-  --card:     #111A2E;
-  --card2:    #162035;
-  --border:   #1E2D4A;
-  --green:    #16C784;
-  --red:      #EA3943;
-  --text:     #E6EAF2;
-  --muted:    #8A94A8;
-  --amber:    #F0A500;
+  --bg:       #0D0D14;
+  --surface:  #13131F;
+  --card:     #13131F;
+  --card2:    #1E1A35;
+  --border:   #2A1F4A;
+  --green:    #FF6B00;
+  --red:      #FF2D6B;
+  --text:     #F0F4FF;
+  --muted:    #8A8AAA;
+  --amber:    #FF6B00;
+  --violet:   #7B2FFF;
 }
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; overflow: hidden; }
@@ -44,10 +52,10 @@ body {
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 #conn-badge {
   font-size: 11px; padding: 3px 10px; border-radius: 20px;
-  background: rgba(234,57,67,.1); color: var(--red); border: 1px solid var(--red);
+  background: rgba(255,45,107,.1); color: var(--red); border: 1px solid var(--red);
   white-space: nowrap;
 }
-#conn-badge.connected { background: rgba(22,199,132,.1); color: var(--green); border-color: var(--green); }
+#conn-badge.connected { background: rgba(255,107,0,.1); color: var(--green); border-color: var(--green); }
 #run-badge { font-size: 11px; color: var(--muted); white-space: nowrap; }
 .app-body { flex: 1; overflow-y: auto; padding: 1rem 1.2rem; }
 .section { display: none; }
@@ -74,24 +82,24 @@ body {
 }
 .form-control:focus, .form-select:focus {
   background: var(--bg); color: var(--text);
-  border-color: var(--green); box-shadow: 0 0 0 2px rgba(22,199,132,.15);
+  border-color: var(--green); box-shadow: 0 0 0 2px rgba(255,107,0,.15);
 }
 .form-control::placeholder { color: var(--muted); }
 .form-check-input { background-color: var(--surface); border-color: var(--border); }
 .form-check-input:checked { background-color: var(--green); border-color: var(--green); }
 .form-check-label { font-size: 12px; color: var(--muted); }
 .btn-primary-g { background: var(--green); color: #000; border: none; border-radius: 8px; font-weight: 700; }
-.btn-primary-g:hover { background: #12a86e; color: #000; }
+.btn-primary-g:hover { background: #FF8C00; color: #000; }
 .btn-outline-g { background: transparent; color: var(--green); border: 1px solid var(--green); border-radius: 8px; font-weight: 600; }
-.btn-outline-g:hover { background: rgba(22,199,132,.1); color: var(--green); }
+.btn-outline-g:hover { background: rgba(255,107,0,.1); color: var(--green); }
 .btn-start {
   background: var(--green); color: #000; border: none; border-radius: 8px;
   font-weight: 700; font-size: 14px; padding: .5rem 1.1rem;
 }
-.btn-start:hover { background: #12a86e; color: #000; }
+.btn-start:hover { background: #FF8C00; color: #000; }
 .btn-start:disabled { opacity: .4; cursor: not-allowed; }
 .btn-stop {
-  background: rgba(234,57,67,.1); color: var(--red);
+  background: rgba(255,45,107,.1); color: var(--red);
   border: 1px solid var(--red); border-radius: 8px;
   font-weight: 700; font-size: 14px; padding: .5rem 1.1rem;
 }
@@ -101,9 +109,9 @@ body {
   background: var(--red); color: #fff; border: none;
   border-radius: 8px; font-weight: 700; font-size: 13px;
 }
-.btn-emergency:hover { background: #c02030; color: #fff; }
+.btn-emergency:hover { background: #D41452; color: #fff; }
 .btn-close-pos {
-  background: rgba(234,57,67,.1); color: var(--red); border: 1px solid var(--border);
+  background: rgba(255,45,107,.1); color: var(--red); border: 1px solid var(--border);
   border-radius: 5px; font-size: 11px; padding: 2px 8px; cursor: pointer;
 }
 .btn-close-pos:hover { background: var(--red); color: #fff; }
@@ -114,19 +122,19 @@ body {
   border-color: var(--border); font-weight: 500; padding: .45rem .75rem;
 }
 .table td { border-color: var(--border); vertical-align: middle; padding: .4rem .75rem; }
-.table tbody tr:hover { background: rgba(22,199,132,.04); }
+.table tbody tr:hover { background: rgba(255,107,0,.04); }
 .badge-buy {
-  background: rgba(22,199,132,.12); color: var(--green);
-  border: 1px solid rgba(22,199,132,.3); border-radius: 4px; padding: 1px 7px; font-size: 11px;
+  background: rgba(255,107,0,.12); color: var(--green);
+  border: 1px solid rgba(255,107,0,.3); border-radius: 4px; padding: 1px 7px; font-size: 11px;
 }
 .badge-sell {
-  background: rgba(234,57,67,.12); color: var(--red);
-  border: 1px solid rgba(234,57,67,.3); border-radius: 4px; padding: 1px 7px; font-size: 11px;
+  background: rgba(255,45,107,.12); color: var(--red);
+  border: 1px solid rgba(255,45,107,.3); border-radius: 4px; padding: 1px 7px; font-size: 11px;
 }
 .conf-wrap { background: var(--surface); border-radius: 5px; height: 7px; overflow: hidden; }
 .conf-fill {
   height: 7px; border-radius: 5px;
-  background: linear-gradient(90deg, #0d7a4e, var(--green));
+  background: linear-gradient(90deg, var(--violet), var(--green));
   transition: width .4s;
 }
 #log-box {
@@ -166,11 +174,34 @@ body {
   display: flex; align-items: center; gap: 8px;
 }
 .bot-banner.stopped  { background: rgba(255,255,255,.03); color: var(--muted); border: 1px solid var(--border); }
-.bot-banner.running  { background: rgba(22,199,132,.08); color: var(--green); border: 1px solid var(--green); }
-.bot-banner.error    { background: rgba(234,57,67,.08); color: var(--red); border: 1px solid var(--red); }
+.bot-banner.running  { background: rgba(255,107,0,.08); color: var(--green); border: 1px solid var(--green); }
+.bot-banner.error    { background: rgba(255,45,107,.08); color: var(--red); border: 1px solid var(--red); }
 .preset-btn { font-size: 12px; padding: 4px 12px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--muted); transition: all .15s; }
 .preset-btn:hover { border-color: var(--green); color: var(--green); }
 .equity-canvas { width: 100%; height: 180px; display: block; }
+.account-gate { min-height:calc(100vh - 55px); display:grid; place-items:center; padding:24px 12px; }
+.account-card { width:min(100%,560px); padding:24px; }
+.account-card h1 { font-size:clamp(1.5rem,4vw,2rem); color:var(--text); }
+.account-card p,.account-muted { color:var(--muted); }
+.account-field { display:grid; gap:6px; margin:14px 0; }
+.account-field label { color:var(--muted); font-size:12px; }
+.account-plans { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:10px; margin:18px 0; }
+.account-plan { border:1px solid var(--border); background:var(--surface); padding:14px; border-radius:10px; }
+.account-plan.featured { border-color:var(--violet); }
+.account-plan strong { display:block; color:var(--text); }
+.account-plan span { color:var(--green); font-weight:700; font-size:1.15rem; }
+.access-message { min-height:1.4em; color:var(--amber); font-size:12px; margin-top:10px; }
+.hidden { display:none !important; }
+@media (max-width:760px) {
+  .topbar { height:auto; min-height:50px; flex-wrap:wrap; padding:6px 8px; gap:4px; }
+  .brand { font-size:.9rem; }
+  .topnav { order:3; flex:1 0 100%; overflow-x:auto; }
+  .tnav { flex:0 0 auto; padding:6px 8px; font-size:12px; }
+  .topbar-right { gap:5px; font-size:11px; }
+  #account-badge { max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #install-app { padding:3px 6px; font-size:10px; }
+  .app-body { padding:.65rem; }
+}
 </style>
 </head>
 <body>
@@ -182,20 +213,95 @@ body {
     <button class="tnav active" onclick="nav('dashboard',this)"><i class="bi bi-speedometer2 me-1"></i>Dashboard</button>
     <button class="tnav" onclick="nav('history',this)"><i class="bi bi-clock-history me-1"></i>History</button>
     <button class="tnav" onclick="nav('performance',this)"><i class="bi bi-bar-chart-line me-1"></i>Performance</button>
+    <button class="tnav" onclick="nav('news',this)"><i class="bi bi-newspaper me-1"></i>News</button>
     <button class="tnav" onclick="nav('settings',this)"><i class="bi bi-sliders me-1"></i>Settings</button>
   </nav>
   <div class="topbar-right">
+    <button id="install-app" class="btn btn-sm btn-outline-g" type="button" onclick="installApp()">Install app</button>
+    <span id="account-badge" class="account-muted">Sign in required</span>
+    <button id="account-signout" class="btn btn-sm btn-outline-g hidden" onclick="signOut()">Sign out</button>
     <span id="run-badge"><i class="bi bi-arrow-repeat me-1"></i>Run: 0</span>
     <span id="conn-badge"><i class="bi bi-circle-fill me-1" style="font-size:7px"></i>Disconnected</span>
   </div>
 </div>
 
+<!-- ACCOUNT / SUBSCRIPTION GATE -->
+<main id="account-gate" class="account-gate">
+  <section class="card account-card">
+    <div id="auth-view">
+      <h1 id="auth-title">Welcome to MyTradeBot</h1>
+      <p id="auth-description">Sign in or create an account to see your plan and bot workspace.</p>
+      <form id="account-form" onsubmit="submitAccountForm(event)">
+        <div class="account-field">
+          <label for="account-email">Email</label>
+          <input class="form-control" id="account-email" type="email" autocomplete="email" required maxlength="254"/>
+        </div>
+        <div class="account-field">
+          <label for="account-password">Password</label>
+          <input class="form-control" id="account-password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required/>
+        </div>
+        <div id="account-phone-wrap" class="account-field hidden">
+          <label for="account-phone">Phone (optional)</label>
+          <input class="form-control" id="account-phone" type="tel" autocomplete="tel" placeholder="07XXXXXXXX or +2547XXXXXXXX" pattern="(?:\+[1-9]\d{7,14}|0[17]\d{8})"/>
+        </div>
+        <details id="setup-token-wrap" class="hidden">
+          <summary class="account-muted">Administrator first-time setup</summary>
+          <div class="account-field">
+            <label for="setup-token">Private administrator setup token</label>
+            <input class="form-control" id="setup-token" type="password" autocomplete="off"/>
+          </div>
+        </details>
+        <button id="account-submit" class="btn btn-primary-g w-100 mt-2" type="submit">Sign in</button>
+      </form>
+      <button id="account-mode" class="btn btn-outline-g w-100 mt-2" type="button" onclick="toggleAccountMode()">New here? Create an account</button>
+      <button id="phone-auth-toggle" class="btn btn-outline-g w-100 mt-2" type="button" onclick="togglePhoneAuth()">Continue with phone verification</button>
+      <div id="phone-auth-panel" class="hidden mt-3">
+        <p class="account-muted mb-2" style="font-size:12px">Verify your phone to sign in or create an account. Phone verification is available when SMS is configured.</p>
+        <div class="account-field">
+          <label for="phone-auth-number">Kenyan or international phone</label>
+          <input class="form-control" id="phone-auth-number" type="tel" autocomplete="tel" placeholder="07XXXXXXXX or +2547XXXXXXXX" pattern="(?:\+[1-9]\d{7,14}|0[17]\d{8})"/>
+        </div>
+        <div class="account-field">
+          <label for="phone-auth-code">SMS code</label>
+          <input class="form-control" id="phone-auth-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}" placeholder="6-digit code"/>
+        </div>
+        <button class="btn btn-outline-g w-100" type="button" onclick="requestPhoneSignInCode()">Send code</button>
+        <button class="btn btn-primary-g w-100 mt-2" type="button" onclick="verifyPhoneSignInCode()">Verify and continue</button>
+      </div>
+      <div id="access-message" class="access-message" role="status" aria-live="polite"></div>
+      <p class="account-muted mt-3 mb-0" style="font-size:11px">Trading involves substantial risk. Use a demo account first. Never share broker passwords.</p>
+    </div>
+    <div id="subscription-view" class="hidden">
+      <h1>Your account</h1>
+      <p id="account-summary"></p>
+      <div id="account-plans" class="account-plans"></div>
+      <div class="alert alert-warning py-2" style="font-size:12px;background:#1E1A35;border-color:#FF6B00;color:#F0F4FF">
+        Checkout is not enabled. Plans shown are not purchasable; no real payment unlocks the bot yet.
+      </div>
+      <p id="access-state" class="account-muted"></p>
+      <div id="phone-link-panel" class="account-field">
+        <label for="phone-link-number">Phone for M-Pesa payments (verify to use checkout)</label>
+        <input class="form-control" id="phone-link-number" type="tel" autocomplete="tel" placeholder="07XXXXXXXX or +2547XXXXXXXX" pattern="(?:\+[1-9]\d{7,14}|0[17]\d{8})"/>
+        <input class="form-control hidden" id="phone-link-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}" placeholder="6-digit SMS code"/>
+        <button id="phone-link-send" class="btn btn-outline-g w-100" type="button" onclick="requestPhoneLinkCode()">Send verification code</button>
+        <button id="phone-link-verify" class="btn btn-primary-g w-100 mt-2 hidden" type="button" onclick="verifyPhoneLinkCode()">Verify phone</button>
+        <div id="phone-link-message" class="access-message" role="status" aria-live="polite"></div>
+      </div>
+      <button id="open-bot" class="btn btn-primary-g w-100" type="button" onclick="openBotWorkspace()">Open app workspace</button>
+      <button class="btn btn-outline-g w-100 mt-2" type="button" onclick="signOut()">Sign out</button>
+    </div>
+  </section>
+</main>
+
 <!-- MAIN -->
-<div class="app-body">
+<div id="bot-app" class="app-body hidden">
 
 <!-- ══════════════════════════ DASHBOARD ══════════════════════════ -->
 <div id="sec-dashboard" class="section active">
 
+  <div id="workspace-access-banner" class="alert alert-warning hidden py-2" role="status">
+    View-only workspace. Connect MT5 and automate trading after access is activated.
+  </div>
   <div class="row g-2 mb-3">
     <div class="col-6 col-sm-4 col-xl-2">
       <div class="mc"><div class="mc-label"><i class="bi bi-wallet2 me-1"></i>Balance</div><div class="mc-value" id="m-balance">—</div></div>
@@ -247,10 +353,10 @@ body {
             <input class="form-control form-control-sm" id="inp-path" placeholder="leave blank for auto-detect"/>
           </div>
           <div class="d-flex gap-2 mt-auto pt-2">
-            <button class="btn btn-primary-g btn-sm flex-fill" onclick="doConnect()">
+            <button id="btn-connect" class="btn btn-primary-g btn-sm flex-fill" onclick="doConnect()">
               <i class="bi bi-plug me-1"></i>Connect
             </button>
-            <button class="btn btn-outline-g btn-sm flex-fill" onclick="doDisconnect()">
+            <button id="btn-disconnect" class="btn btn-outline-g btn-sm flex-fill" onclick="doDisconnect()">
               <i class="bi bi-x-circle me-1"></i>Disconnect
             </button>
           </div>
@@ -324,7 +430,7 @@ body {
               <i class="bi bi-stop-fill me-1"></i>STOP BOT
             </button>
           </div>
-          <button class="btn btn-emergency w-100" onclick="emergencyStop()">
+          <button id="btn-emergency" class="btn btn-emergency w-100" onclick="emergencyStop()">
             <i class="bi bi-exclamation-triangle-fill me-1"></i>EMERGENCY STOP &amp; CLOSE ALL POSITIONS
           </button>
         </div>
@@ -436,6 +542,31 @@ body {
   <p class="mt-2" style="font-size:11px;color:var(--muted)">Metrics use locally recorded closed bot trades only. Past results do not guarantee future results.</p>
 </div>
 
+<!-- ══════════════════════════ NEWS ══════════════════════════ -->
+<div id="sec-news" class="section">
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-newspaper"></i>US NFP & CPI calendar</span>
+      <button class="btn btn-outline-g btn-sm" type="button" onclick="loadNewsEvents()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+      </button>
+    </div>
+    <div class="card-body">
+      <p class="mb-2">Post-release context compares the reported result with Trading Economics' consensus forecast. A surprise may support or weaken USD, but the reaction is uncertain and can reverse.</p>
+      <p id="news-provider-status" class="account-muted mb-3" role="status">Loading calendar status…</p>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Date</th><th>Event</th><th>Actual</th><th>Forecast</th><th>Previous</th><th>Reaction context</th></tr></thead>
+          <tbody id="news-events">
+            <tr><td colspan="6" class="text-center py-4 account-muted">Calendar not loaded yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="account-muted mb-0" style="font-size:11px">A directional USD bias is not a pair-specific buy/sell order, guaranteed prediction, or instruction to trade. No news trade is placed automatically.</p>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════ SETTINGS ══════════════════════════ -->
 <div id="sec-settings" class="section">
   <div class="row g-3">
@@ -525,7 +656,7 @@ body {
         <div class="card-body p-3 d-flex flex-column gap-2">
           <label class="form-label">License API URL</label>
           <input class="form-control form-control-sm" id="s-lic-url" placeholder="https://licenses.yourdomain.com"/>
-          <p style="font-size:11px;color:var(--muted)">Leave blank to run without license checks (development mode). Set this to your deployed licensing backend URL for production.</p>
+          <p style="font-size:11px;color:var(--muted)">The local account service is configured automatically. Keep the app bound to this PC; remote phone control requires a separately secured relay.</p>
         </div>
       </div>
       <div class="card mt-3">
@@ -545,7 +676,7 @@ body {
 </div><!-- /app-body -->
 
 <!-- STATUS BAR -->
-<div id="statusbar">
+<div id="statusbar" class="hidden">
   <span><span class="dot" id="status-dot"></span><span id="status-txt">Disconnected</span></span>
   <span id="status-bot" style="margin-left:auto"></span>
 </div>
@@ -555,6 +686,311 @@ body {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+const ACCOUNT_API = '/account-api';
+let accountAccessToken = null;
+let accountMode = 'login';
+let activeAccount = null;
+let activeAccountHasBotAccess = false;
+let logStream = null;
+let appPollingTimer = null;
+let logReconnectTimer = null;
+let pendingInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  pendingInstallPrompt = event;
+});
+
+async function installApp() {
+  if (!pendingInstallPrompt) {
+    toast('On Android, use your browser menu and choose Install app or Add to Home screen.');
+    return;
+  }
+  pendingInstallPrompt.prompt();
+  const choice = await pendingInstallPrompt.userChoice;
+  pendingInstallPrompt = null;
+  if (choice.outcome === 'accepted') toast('MyTradeBot was added to your home screen.');
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js').catch(error => {
+    console.error('Could not register the MyTradeBot app shell:', error);
+  });
+}
+
+async function submitAccountForm(event) {
+  event.preventDefault();
+  const button = document.getElementById('account-submit');
+  const email = document.getElementById('account-email').value.trim().toLowerCase();
+  const password = document.getElementById('account-password').value;
+  const headers = {'Content-Type':'application/json'};
+  const setupToken = document.getElementById('setup-token').value.trim();
+  if (accountMode === 'register' && setupToken) headers['X-Admin-Bootstrap-Token'] = setupToken;
+  const payload = {email, password};
+  const phone = document.getElementById('account-phone').value.trim();
+  if (accountMode === 'register' && phone) payload.phone_number = phone;
+  button.disabled = true;
+  setAccessMessage('');
+  try {
+    const response = await fetch(`${ACCOUNT_API}/auth/${accountMode === 'register' ? 'register' : 'login'}`, {
+      method:'POST', headers, body:JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Account request failed.');
+    accountAccessToken = result.access_token;
+    document.getElementById('account-password').value = '';
+    document.getElementById('setup-token').value = '';
+    document.getElementById('account-phone').value = '';
+    await loadAccount();
+  } catch (error) {
+    setAccessMessage(error.message || 'Could not reach the account service.');
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function toggleAccountMode() {
+  accountMode = accountMode === 'login' ? 'register' : 'login';
+  const creating = accountMode === 'register';
+  document.getElementById('auth-title').textContent = creating ? 'Create your account' : 'Welcome to MyTradeBot';
+  document.getElementById('auth-description').textContent = creating
+    ? 'Create one account for your subscription and local bot.'
+    : 'Sign in to see your plan and bot workspace.';
+  document.getElementById('account-password').autocomplete = creating ? 'new-password' : 'current-password';
+  document.getElementById('account-phone-wrap').classList.toggle('hidden', !creating);
+  document.getElementById('setup-token-wrap').classList.toggle('hidden', !creating);
+  document.getElementById('account-submit').textContent = creating ? 'Create account' : 'Sign in';
+  document.getElementById('account-mode').textContent = creating
+    ? 'Already have an account? Sign in'
+    : 'New here? Create an account';
+  setAccessMessage('');
+}
+
+function togglePhoneAuth() {
+  const panel = document.getElementById('phone-auth-panel');
+  panel.classList.toggle('hidden');
+}
+
+async function requestPhoneSignInCode() {
+  const email = document.getElementById('account-email').value.trim().toLowerCase();
+  const phone_number = document.getElementById('phone-auth-number').value.trim();
+  if (!email || !phone_number) {
+    setAccessMessage('Enter your email above and your phone number.');
+    return;
+  }
+  try {
+    const response = await fetch(`${ACCOUNT_API}/auth/phone/request`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email, phone_number})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Could not send verification code.');
+    setAccessMessage('Code sent. It expires in 5 minutes.');
+  } catch (error) {
+    setAccessMessage(error.message || 'Could not reach the phone service.');
+  }
+}
+
+async function verifyPhoneSignInCode() {
+  const email = document.getElementById('account-email').value.trim().toLowerCase();
+  const phone_number = document.getElementById('phone-auth-number').value.trim();
+  const code = document.getElementById('phone-auth-code').value.trim();
+  try {
+    const response = await fetch(`${ACCOUNT_API}/auth/phone/verify`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email, phone_number, code})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Phone verification failed.');
+    accountAccessToken = result.access_token;
+    document.getElementById('account-password').value = '';
+    document.getElementById('phone-auth-code').value = '';
+    await loadAccount();
+  } catch (error) {
+    setAccessMessage(error.message || 'Could not verify this phone number.');
+  }
+}
+
+function setAccessMessage(text) {
+  document.getElementById('access-message').textContent = text;
+}
+
+function hasAutomatedTradingAccess(subscription) {
+  return Boolean(subscription &&
+    subscription.status === 'active' &&
+    subscription.provider !== 'trial' &&
+    new Date(subscription.expires_at) > new Date());
+}
+
+async function loadAccount() {
+  const response = await fetch(`${ACCOUNT_API}/account`, {
+    headers:{Authorization:`Bearer ${accountAccessToken}`}
+  });
+  const account = await response.json();
+  if (!response.ok) throw new Error(account.detail || 'Could not load your account.');
+  activeAccount = account;
+  const subscription = account.subscription;
+  activeAccountHasBotAccess = hasAutomatedTradingAccess(subscription);
+  document.getElementById('auth-view').classList.add('hidden');
+  document.getElementById('subscription-view').classList.remove('hidden');
+  const summary = subscription
+    ? `${account.email} · ${subscription.plan} ${subscription.status} · ${subscription.provider}`
+    : `${account.email} · No subscription`;
+  document.getElementById('account-summary').textContent = summary;
+  document.getElementById('access-state').textContent = activeAccountHasBotAccess
+    ? subscription.provider === 'developer'
+      ? 'Developer testing access is active for this account.'
+      : 'Payment-confirmed access is active. Connect MT5 from the workspace to bind this device.'
+    : 'You can view the workspace, but bot execution requires a confirmed paid subscription.';
+  const openButton = document.getElementById('open-bot');
+  openButton.disabled = false;
+  openButton.textContent = 'Open app workspace';
+  document.getElementById('phone-link-panel').classList.toggle('hidden', account.phone_verified);
+  document.getElementById('phone-link-message').textContent = account.phone_verified
+    ? 'Phone verified for checkout.'
+    : 'Phone verification is only for billing; it does not grant free bot access.';
+  if (account.phone_number) {
+    document.getElementById('phone-link-number').value = account.phone_number;
+  }
+  document.getElementById('workspace-access-banner').classList.toggle('hidden', activeAccountHasBotAccess);
+  document.getElementById('btn-connect').disabled = !activeAccountHasBotAccess;
+  document.getElementById('btn-start').disabled = !activeAccountHasBotAccess;
+  document.getElementById('account-badge').textContent = account.email;
+  document.getElementById('account-signout').classList.remove('hidden');
+  await renderAccountPlans(account.plans || []);
+}
+
+async function requestPhoneLinkCode() {
+  const phone_number = document.getElementById('phone-link-number').value.trim();
+  const email = activeAccount && activeAccount.email;
+  if (!phone_number || !email) {
+    document.getElementById('phone-link-message').textContent = 'Enter a phone number to verify.';
+    return;
+  }
+  try {
+    const response = await fetch(`${ACCOUNT_API}/account/phone/request`, {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        Authorization:`Bearer ${accountAccessToken}`
+      },
+      body:JSON.stringify({email, phone_number})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Could not send verification code.');
+    document.getElementById('phone-link-code').classList.remove('hidden');
+    document.getElementById('phone-link-verify').classList.remove('hidden');
+    document.getElementById('phone-link-message').textContent = 'Code sent. It expires in 5 minutes.';
+  } catch (error) {
+    document.getElementById('phone-link-message').textContent = error.message || 'Could not reach the phone service.';
+  }
+}
+
+async function verifyPhoneLinkCode() {
+  const phone_number = document.getElementById('phone-link-number').value.trim();
+  const code = document.getElementById('phone-link-code').value.trim();
+  const email = activeAccount && activeAccount.email;
+  try {
+    const response = await fetch(`${ACCOUNT_API}/account/phone/verify`, {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        Authorization:`Bearer ${accountAccessToken}`
+      },
+      body:JSON.stringify({email, phone_number, code})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Phone verification failed.');
+    document.getElementById('phone-link-message').textContent = 'Phone verified.';
+    await loadAccount();
+  } catch (error) {
+    document.getElementById('phone-link-message').textContent = error.message || 'Could not verify this phone number.';
+  }
+}
+
+async function renderAccountPlans(plans) {
+  const availability = await fetch(`${ACCOUNT_API}/billing/availability`).then(response => response.json());
+  const root = document.getElementById('account-plans');
+  root.replaceChildren();
+  for (const plan of plans) {
+    const card = document.createElement('div');
+    card.className = `account-plan${plan.id === 'ultimate' ? ' featured' : ''}`;
+    const name = document.createElement('strong');
+    name.textContent = plan.name;
+    const price = document.createElement('span');
+    price.textContent = `$${plan.monthly_price_usd}/mo`;
+    const action = document.createElement(availability.enabled ? 'button' : 'div');
+    action.className = availability.enabled ? 'btn btn-primary-g btn-sm w-100 mt-2' : 'account-muted';
+    action.style.fontSize = '11px';
+    action.textContent = availability.enabled ? 'Subscribe' : 'Checkout unavailable';
+    if (availability.enabled) {
+      action.type = 'button';
+      action.addEventListener('click', () => startPlanCheckout(plan.id));
+    }
+    card.append(name, price, action);
+    root.append(card);
+  }
+}
+
+async function startPlanCheckout(plan) {
+  const message = document.getElementById('access-state');
+  try {
+    const response = await fetch(`${ACCOUNT_API}/subscriptions/checkout`, {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        Authorization:`Bearer ${accountAccessToken}`
+      },
+      body:JSON.stringify({plan})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Checkout could not start.');
+    message.textContent = result.message || 'Payment prompt sent. Bot access is enabled after payment confirmation.';
+  } catch (error) {
+    message.textContent = error.message || 'Could not reach the payment service.';
+  }
+}
+
+function openBotWorkspace() {
+  if (!activeAccount || document.getElementById('open-bot').disabled) return;
+  document.getElementById('account-gate').classList.add('hidden');
+  document.getElementById('bot-app').classList.remove('hidden');
+  document.getElementById('statusbar').classList.remove('hidden');
+  document.getElementById('statusbar').style.display = '';
+  if (!logStream) startSSE();
+  if (!appPollingTimer) {
+    poll();
+    appPollingTimer = setInterval(poll, 2000);
+  }
+}
+
+async function signOut() {
+  if (document.getElementById('bot-app').classList.contains('hidden') === false) {
+    if (document.getElementById('btn-stop') && !document.getElementById('btn-stop').disabled) {
+      await stopBot();
+    }
+    if (logStream) logStream.close();
+    logStream = null;
+    if (logReconnectTimer) clearTimeout(logReconnectTimer);
+    logReconnectTimer = null;
+    if (appPollingTimer) clearInterval(appPollingTimer);
+    appPollingTimer = null;
+  }
+  accountAccessToken = null;
+  activeAccount = null;
+  activeAccountHasBotAccess = false;
+  document.getElementById('bot-app').classList.add('hidden');
+  document.getElementById('statusbar').classList.add('hidden');
+  document.getElementById('account-gate').classList.remove('hidden');
+  document.getElementById('subscription-view').classList.add('hidden');
+  document.getElementById('auth-view').classList.remove('hidden');
+  document.getElementById('account-badge').textContent = 'Sign in required';
+  document.getElementById('account-signout').classList.add('hidden');
+  document.getElementById('account-password').value = '';
+}
+
 // ── Navigation ────────────────────────────────────────────────────────────────
 function nav(id, btn) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -563,7 +999,57 @@ function nav(id, btn) {
   btn.classList.add('active');
   if (id === 'history') loadHistory();
   if (id === 'performance') loadPerformance();
+  if (id === 'news') loadNewsEvents();
   if (id === 'settings') loadSettings();
+}
+
+async function loadNewsEvents() {
+  const status = document.getElementById('news-provider-status');
+  const tbody = document.getElementById('news-events');
+  status.textContent = 'Loading Trading Economics calendar…';
+  try {
+    const response = await fetch('/api/news/nfp-cpi');
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Calendar request failed.');
+    status.textContent = result.message;
+    tbody.replaceChildren();
+    if (!result.configured) {
+      const row = tbody.insertRow();
+      const cell = row.insertCell();
+      cell.colSpan = 6;
+      cell.className = 'text-center py-4 account-muted';
+      cell.textContent = 'Calendar unavailable until the Trading Economics API key is configured.';
+      return;
+    }
+    if (!result.events.length) {
+      const row = tbody.insertRow();
+      const cell = row.insertCell();
+      cell.colSpan = 6;
+      cell.className = 'text-center py-4 account-muted';
+      cell.textContent = 'No NFP or CPI events returned for the selected date range.';
+      return;
+    }
+    for (const event of result.events) {
+      const row = tbody.insertRow();
+      const values = [
+        event.date ? new Date(event.date).toLocaleString() : '—',
+        `${event.type}: ${event.event || '—'}`,
+        event.actual || '—',
+        event.forecast || '—',
+        event.previous || '—',
+        event.released ? event.usd_bias : 'Awaiting release'
+      ];
+      for (const value of values) row.insertCell().textContent = String(value);
+    }
+  } catch (error) {
+    status.textContent = error.message || 'Could not load the Trading Economics calendar.';
+    tbody.replaceChildren();
+    const row = tbody.insertRow();
+    const cell = row.insertCell();
+    cell.colSpan = 6;
+    cell.className = 'text-center py-4 account-muted';
+    cell.textContent = 'News data is currently unavailable. Check the provider configuration and retry.';
+  }
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -586,6 +1072,10 @@ function onBrokerChange() {
 }
 
 async function doConnect() {
+  if (!activeAccountHasBotAccess) {
+    toast('This account has view-only access. Activate a paid subscription to connect MT5.', false);
+    return;
+  }
   const login = parseInt(document.getElementById('inp-login').value) || 0;
   const password = document.getElementById('inp-password').value;
   const server = document.getElementById('inp-server').value.trim();
@@ -599,12 +1089,46 @@ async function doConnect() {
   if (r.ok) {
     setConnected(true);
     toast('Connected to MT5');
+    await bindConnectedTradingAccount(login);
     loadSymbols();
     refreshAccount();
   } else {
     setConnected(false);
     toast('Connection failed — check MT5 is running and credentials are correct.', false);
   }
+}
+
+async function bindConnectedTradingAccount(login) {
+  if (!accountAccessToken || !activeAccount) return;
+  if (!hasAutomatedTradingAccess(activeAccount.subscription)) {
+    toast('MT5 connected. Activate paid access before starting the bot.', false);
+    return;
+  }
+  try {
+    const response = await fetch(`${ACCOUNT_API}/licenses/bind`, {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        Authorization:`Bearer ${accountAccessToken}`
+      },
+      body:JSON.stringify({mt5_account:String(login),device_id:await getDeviceFingerprint()})
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      toast(result.detail || 'Could not bind the subscription to this MT5 account.', false);
+      return;
+    }
+    toast('Bot access verified for this MT5 account and device.');
+  } catch (error) {
+    toast(error.message || 'Could not verify this MT5 account.', false);
+  }
+}
+
+async function getDeviceFingerprint() {
+  const response = await fetch('/api/device-id');
+  if (!response.ok) throw new Error('Could not identify this Windows device.');
+  const result = await response.json();
+  return result.device_id;
 }
 
 async function doDisconnect() {
@@ -678,7 +1202,7 @@ async function refreshPositions() {
       <td>${p.sl ? p.sl.toFixed(5) : '—'}</td>
       <td>${p.tp ? p.tp.toFixed(5) : '—'}</td>
       <td ${pnlCls}>${fmtPnl(p.profit)}</td>
-      <td><button class="btn-close-pos" onclick="closePos(${p.ticket})">Close</button></td>
+      <td><button class="btn-close-pos" onclick="closePos(${p.ticket})" ${activeAccountHasBotAccess ? '' : 'disabled'}>Close</button></td>
     </tr>`;
   }).join('');
 }
@@ -691,6 +1215,10 @@ async function closePos(ticket) {
 
 // ── Bot control ───────────────────────────────────────────────────────────────
 async function startBot() {
+  if (!activeAccountHasBotAccess) {
+    toast('Automated trading requires an active paid subscription.', false);
+    return;
+  }
   const symbol = document.getElementById('inp-symbol').value.trim();
   if (!symbol) { toast('Enter a symbol first.', false); return; }
   const r = await fetch('/api/bot/start', {
@@ -734,7 +1262,7 @@ function setBotRunning(running, msg) {
   banner.className = 'bot-banner ' + (running ? 'running' : 'stopped');
   dot.className = 'dot' + (running ? ' running' : '');
   txt.textContent = msg || (running ? 'Running' : 'Stopped');
-  document.getElementById('btn-start').disabled = running;
+  document.getElementById('btn-start').disabled = running || !activeAccountHasBotAccess;
   document.getElementById('btn-stop').disabled = !running;
   document.getElementById('status-bot').textContent = running ? '● Bot running' : '';
 }
@@ -772,14 +1300,25 @@ function escHtml(s) {
 }
 
 function startSSE() {
+  if (logStream) logStream.close();
   const es = new EventSource('/api/logs/stream');
+  logStream = es;
   es.onmessage = e => {
     try {
       const d = JSON.parse(e.data);
       if (d.l !== 'ping') appendLog(d.t, d.m, d.l);
     } catch {}
   };
-  es.onerror = () => setTimeout(startSSE, 3000);
+  es.onerror = () => {
+    es.close();
+    if (logStream === es) logStream = null;
+    if (!logReconnectTimer && activeAccount && !document.getElementById('bot-app').classList.contains('hidden')) {
+      logReconnectTimer = setTimeout(() => {
+        logReconnectTimer = null;
+        startSSE();
+      }, 3000);
+    }
+  };
 }
 
 // ── History ───────────────────────────────────────────────────────────────────
@@ -851,7 +1390,7 @@ function drawEquity(curve) {
   ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim();
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (!curve.length) {
-    ctx.fillStyle = '#8A94A8';
+    ctx.fillStyle = '#8A8AAA';
     ctx.font = '13px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('No closed trades yet', canvas.width / 2, 90);
@@ -866,10 +1405,10 @@ function drawEquity(curve) {
   const x = i => pad.l + i * w / (vals.length - 1);
   const y = v => pad.t + h - (v - lo) / range * h;
   const rising = vals[vals.length - 1] >= vals[0];
-  const color = rising ? '#16C784' : '#EA3943';
+  const color = rising ? '#FF6B00' : '#FF2D6B';
   // Gradient fill
   const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + h);
-  grad.addColorStop(0, rising ? 'rgba(22,199,132,.25)' : 'rgba(234,57,67,.25)');
+  grad.addColorStop(0, rising ? 'rgba(255,107,0,.25)' : 'rgba(255,45,107,.25)');
   grad.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.beginPath();
   ctx.moveTo(x(0), y(vals[0]));
@@ -887,7 +1426,7 @@ function drawEquity(curve) {
   vals.forEach((v, i) => ctx.lineTo(x(i), y(v)));
   ctx.stroke();
   // Y axis labels
-  ctx.fillStyle = '#8A94A8';
+  ctx.fillStyle = '#8A8AAA';
   ctx.font = '10px Inter, sans-serif';
   ctx.textAlign = 'right';
   [lo, (lo + hi) / 2, hi].forEach(v => {
@@ -910,6 +1449,7 @@ async function loadSettings() {
   document.getElementById('s-weekly').value = r.max_weekly_loss_percent ?? 5;
   document.getElementById('s-spread').value = r.max_spread_points ?? 30;
   document.getElementById('s-margin').value = r.minimum_free_margin ?? 100;
+  document.getElementById('s-lic-url').value = r.license_api_url || '';
 }
 
 async function saveSettings() {
@@ -925,6 +1465,7 @@ async function saveSettings() {
     max_weekly_loss_percent: parseFloat(document.getElementById('s-weekly').value),
     max_spread_points: parseFloat(document.getElementById('s-spread').value),
     minimum_free_margin: parseFloat(document.getElementById('s-margin').value),
+    license_api_url: document.getElementById('s-lic-url').value.trim(),
   };
   const r = await fetch('/api/settings', {
     method: 'POST', headers: {'Content-Type':'application/json'},
@@ -973,10 +1514,7 @@ async function poll() {
   await refreshBotStatus();
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-startSSE();
-poll();
-setInterval(poll, 2000);
+// The bot workspace remains closed until account and subscription state is checked.
 </script>
 </body>
 </html>
