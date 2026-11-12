@@ -7,7 +7,9 @@ Status: complete and unit-tested locally.
 - FastAPI licensing service: registration, authenticated login, subscription provisioning, account-and-device-bound license validation, revocation, and administrator dashboard data.
 - Passwords are hashed with bcrypt; API sessions and six-hour license assertions are signed JWTs.
 - License checks bind only an MT5 account number and a one-way device hash; broker passwords are neither accepted nor stored.
-- Desktop application validates the license before automated trading begins, repeats the check every four hours, and allows only a 72-hour offline grace after a successful validation.
+- Desktop application requires a configured license API and an active paid subscription before automated trading begins, except for the explicitly configured developer test account. First activation signs in to the customer account and binds its entitlement to the MT5 account and device. The entitlement is revalidated every five minutes and fails closed on service errors.
+- Free trials do not authorize automated trading. Manual checkout requests remain pending; only verified provider callbacks activate a paid entitlement.
+- Paid M-Pesa checkout remains disabled until its sandbox flow, renewal, and production configuration are verified.
 - PostgreSQL is required in production; SQLite is exclusively supported for local development/tests.
 - Process-local rate limiting is active. Deploy one instance or put a shared rate limiter/reverse proxy in front of multi-instance production deployments.
 - Vercel entrypoint, deployment configuration, and environment-variable template are included.
@@ -20,7 +22,7 @@ backend/requirements.txt   Backend dependencies
 api/index.py               Vercel ASGI entrypoint
 vercel.json                Vercel routing/build configuration
 .env.example               Required production environment variables
-core/licensing.py          Desktop license validation and offline grace
+core/licensing.py          Desktop paid-subscription validation and activation
 tests_backend/             Backend flow tests
 tests/test_licensing.py    Desktop licensing tests
 ```

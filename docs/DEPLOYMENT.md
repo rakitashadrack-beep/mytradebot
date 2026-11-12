@@ -4,7 +4,7 @@ This repository is deployable after you provide infrastructure under your owners
 
 ## 1. Create required accounts
 
-You need: a Git provider repository, Vercel account, domain registrar/DNS account, managed PostgreSQL provider, payment provider (Stripe or a supported mobile-money provider), and code-signing certificate provider.
+You need: a Git provider repository, Vercel account, domain registrar/DNS account, managed PostgreSQL provider, Africa's Talking account for SMS, and a code-signing certificate provider. For the planned Kenya launch, also provision a Safaricom Daraja merchant account.
 
 Enable MFA on every account before continuing.
 
@@ -18,15 +18,15 @@ Enable MFA on every account before continuing.
 ## 3. Deploy licensing API to Vercel
 
 1. Push this project to a private Git repository.
-2. Import it into Vercel with the repository root as the project root.
+2. Import it into Vercel with the repository root (`./`) as the project root. The root `vercel.json` builds `api/index.py` and routes requests to it. Do not select `/api` or `/backend` as a separate project root for this configuration.
 3. Select Python 3.13; `.python-version` and `pyproject.toml` declare this already.
-4. In Vercel Production Environment Variables, set every value in `.env.example`.
+4. In Vercel Production Environment Variables, enter the required values for your selected production providers. `.env.example` contains placeholders, not usable credentials; never upload it or copy placeholder values as production settings.
 5. Generate `JWT_SECRET`, `LICENSE_SIGNING_SECRET`, and `ADMIN_BOOTSTRAP_TOKEN` separately, each at least 32 random characters.
-6. Set `MYTRADEBOT_ENV=production`, a PostgreSQL `DATABASE_URL`, and `PAYMENT_PROVIDER=stripe` or `mobile_money`.
+6. Set `MYTRADEBOT_ENV=production`, a PostgreSQL `DATABASE_URL`, `PAYMENT_PROVIDER=mpesa_daraja`, `MPESA_ENVIRONMENT=production`, exact allowed CORS origins, and `SMS_PROVIDER=africastalking` with its private username and API key. Enter all Daraja credentials, the HTTPS callback URL/token, and KES prices privately in the deployment settings.
 7. Deploy. Confirm `https://YOUR-VERCEL-PROJECT.vercel.app/health` reports `{"status":"ok"}`.
 8. Register the configured `ADMIN_EMAIL` as the first administrator, sending `ADMIN_BOOTSTRAP_TOKEN` in the `X-Admin-Bootstrap-Token` header over HTTPS. Keep the token private.
 
-The API should not be publicly marketed until registration, checkout, payment callback, validation, revocation, and a database backup restore have all been tested in staging.
+The backend serves an installable account portal at `/`. Phone OTP uses Africa's Talking; use HTTPS for deployment. Email receipts and account recovery remain unavailable until an email provider is implemented and configured. The PWA does not relay commands to the Windows trading app. Paid checkout is intentionally disabled in code (`PAID_PLANS_ENABLED=False`), and the Daraja callback flow has not been verified against Safaricom's sandbox. Do not accept payments or market paid access until the remote-PC relay, promised plan features, email, billing, callback verification, renewal/expiry, and staging tests are complete. Do not expose the unauthenticated localhost trading dashboard to the internet.
 
 ## 4. Configure payments
 
@@ -40,9 +40,11 @@ https://YOUR-API-DOMAIN/payments/webhook/stripe
 
 Use Stripe test mode first. A completed Stripe Checkout callback changes a license from `pending` to `active`.
 
-### Mobile money
+### M-Pesa / Daraja (not yet enabled)
 
-Set `PAYMENT_PROVIDER=mobile_money`, `MOBILE_MONEY_CHECKOUT_URL`, and `MOBILE_MONEY_CALLBACK_SECRET`. The provider must redirect to the supplied checkout URL and send JSON `{ "reference": "LICENSE-ID", "status": "paid" }` with an `X-Payment-Signature` equal to the HMAC-SHA256 of the raw body using the configured secret. Test signatures and rejected callbacks before enabling production.
+The implementation supports a customer-approved STK Push using the Daraja API. Configure `PAYMENT_PROVIDER=mpesa_daraja`, production Daraja credentials, an HTTPS callback URL ending in the exact `MPESA_CALLBACK_TOKEN`, and explicit whole-KES prices for all three plans. Callback URLs contain a secret path token; configure proxies and logs not to record that path. Never put merchant credentials or payout details in Git or chat.
+
+This flow has not yet been verified in Daraja sandbox or production. `PAID_PLANS_ENABLED` is a code-level safety gate and is currently `False`; checkout returns HTTP 503 and successful-looking payment responses must not be expected. Do not change the gate until AI/relay features are available, callbacks are independently verified and tested, and the complete purchase/refund/expiry process has passed staging. The current STK Push is customer-initiated per renewal; it does not automatically charge monthly.
 
 ## 5. Attach your domain
 

@@ -15,7 +15,9 @@ Do not launch or sell until every applicable item is complete and independently 
 
 - [ ] Deploy PostgreSQL with backups, TLS, least-privilege database access, and a tested restore.
 - [ ] Set unique production secrets in Vercel; never commit `.env`.
-- [ ] Test registration, login, subscription checkout, payment webhook, validation, offline grace, and revocation on a staging service.
+- [ ] Test registration, login, trial expiry, subscription checkout, payment callback verification, validation, and revocation on a staging service. Checkout is currently code-disabled.
+- [ ] Verify desktop and local web bot start fail when the license API is missing, the account is trialing, payment is pending, or the paid subscription is expired/revoked; verify only the configured developer account receives its local test entitlement.
+- [ ] Do not accept payments until AI, email receipts/recovery, and the authenticated Windows-PC relay are implemented and tested.
 - [ ] Verify first-admin registration fails without the bootstrap token and succeeds only for the configured owner email.
 - [ ] Configure a shared rate limit/WAF for production if running multiple API instances.
 - [ ] Enable account MFA at Vercel, database, domain registrar, source control, and payment provider.
@@ -23,7 +25,7 @@ Do not launch or sell until every applicable item is complete and independently 
 ## Legal and commercial
 
 - [ ] Obtain legal review of the terms, risk disclosure, privacy notice, refunds, tax, and applicable marketing rules.
-- [ ] Configure approved Stripe/mobile-money accounts, webhooks, receipts, refunds, and support process.
+- [ ] Configure the approved Daraja merchant account, callback, receipts, refunds, renewal process, and support channel; verify in sandbox before production.
 - [ ] Confirm broker terms permit the intended automation and marketing use.
 - [ ] Remove every claim that implies guaranteed profits or “winning” trades.
 
