@@ -1,11 +1,98 @@
 """Charts and confidence widgets for MyTradeBot."""
 from __future__ import annotations
 import math
+import json
+import re
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QBrush, QLinearGradient
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import QUrl
+from PySide6.QtWebEngineCore import QWebEngineSettings
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from ui.palette import C_CARD, C_BORDER, C_WHITE, C_MUTED, C_AMBER, C_VIOLET, C_DANGER
+
+
+_FOREX_CURRENCIES = {
+    "AUD", "CAD", "CHF", "CNH", "CNY", "CZK", "DKK", "EUR", "GBP",
+    "HKD", "HUF", "ILS", "JPY", "MXN", "NOK", "NZD", "PLN", "SEK",
+    "SGD", "THB", "TRY", "USD", "ZAR",
+}
+
+
+def tradingview_symbol_for_mt5(symbol: str) -> str:
+    """Map common MT5 forex symbols to TradingView symbols; preserve other tickers."""
+    ticker = symbol.strip().upper()
+    if ticker.startswith(("XAUUSD", "XAGUSD")):
+        return f"OANDA:{ticker[:6]}"
+    pair = ticker[:6]
+    if len(pair) == 6 and pair[:3] in _FOREX_CURRENCIES and pair[3:] in _FOREX_CURRENCIES:
+        return f"FX:{pair}"
+    return ticker
+
+
+class TradingViewChart(QWidget):
+    """TradingView's hosted interactive market chart."""
+
+    _INTERVALS = {"1", "5", "15", "30", "60", "240", "D", "W", "M"}
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.view = QWebEngineView(self)
+        self.view.setMinimumHeight(500)
+        self.view.settings().setAttribute(
+            QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True
+        )
+        layout.addWidget(self.view)
+
+    def load_chart(self, symbol: str, interval: str) -> None:
+        symbol = symbol.strip()
+        if not re.fullmatch(r"[A-Za-z0-9._:/-]{1,80}", symbol):
+            raise ValueError("Enter a TradingView symbol such as FX:EURUSD or OANDA:XAUUSD.")
+        if interval not in self._INTERVALS:
+            raise ValueError(f"Unsupported TradingView interval: {interval}")
+
+        options = json.dumps({
+            "autosize": True,
+            "allow_symbol_change": True,
+            "calendar": False,
+            "details": False,
+            "hide_side_toolbar": False,
+            "hide_top_toolbar": False,
+            "hide_legend": False,
+            "hide_volume": True,
+            "interval": interval,
+            "locale": "en",
+            "save_image": False,
+            "style": "1",
+            "symbol": symbol,
+            "theme": "dark",
+            "timezone": "Etc/UTC",
+            "withdateranges": True,
+        }).replace("<", "\\u003c")
+        html = f"""<!doctype html>
+<html>
+<head><meta charset="utf-8">
+<style>
+html, body, .tradingview-widget-container {{ width:100%; height:100%; margin:0; }}
+.tradingview-widget-container__widget {{ width:100%; height:calc(100% - 32px); }}
+.tradingview-widget-copyright {{ height:32px; font:12px Arial,sans-serif; text-align:center; }}
+</style></head>
+<body>
+<div class="tradingview-widget-container">
+  <div class="tradingview-widget-container__widget"></div>
+  <div class="tradingview-widget-copyright">
+    <a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank">Charts by TradingView</a>
+  </div>
+  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+  {options}
+  </script>
+</div>
+</body>
+</html>"""
+        self.view.setHtml(html, QUrl("https://www.tradingview.com/"))
 
 
 class ConfidenceMeter(QWidget):

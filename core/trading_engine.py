@@ -61,7 +61,7 @@ class TradingEngine:
         strategy: Strategy,
         config: TradingConfig,
         license_checker: Callable[[], object] | None = None,
-        license_recheck_seconds: int = 14_400,
+        license_recheck_seconds: int = 300,
     ) -> None:
         config.validate()
         self.bridge = bridge

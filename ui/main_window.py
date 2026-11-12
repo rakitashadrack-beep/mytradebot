@@ -6,18 +6,19 @@ Pure automatic mode: set target, bot hunts it, stops when reached.
 from __future__ import annotations
 import sys
 import csv
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, QTimer, Signal, Slot
-from PySide6.QtGui import QFont, QColor, QIcon
+from PySide6.QtCore import Qt, QThread, QTimer, QSignalBlocker, Signal, Slot, QUrl
+from PySide6.QtGui import QFont, QColor, QIcon, QDesktopServices
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QLineEdit, QDoubleSpinBox, QComboBox,
     QTableWidget, QTableWidgetItem, QTextEdit, QGroupBox,
     QSplitter, QStatusBar, QMessageBox, QHeaderView, QTabWidget,
     QFormLayout, QFileDialog, QSpinBox, QSystemTrayIcon, QStyle,
-    QProgressBar, QFrame,
+    QProgressBar, QFrame, QScrollArea, QInputDialog,
 )
 
 from core.constants import APP_NAME, APP_VERSION, RISK_DISCLAIMER, OrderType, BotState
@@ -32,7 +33,10 @@ from core.backtester import BacktestConfig, Backtester
 from core.licensing import LicenseManager
 from core.risk import SymbolConstraints
 from ui.palette import STYLE, C_AMBER, C_VIOLET, C_WHITE, C_MUTED, C_DANGER, C_CARD, C_BORDER, C_BG
-from ui.charts import CandleChart, LineChart, ConfidenceMeter
+from ui.charts import (
+    CandleChart, ConfidenceMeter, LineChart, TradingViewChart,
+    tradingview_symbol_for_mt5,
+)
 
 log = get_logger("ui")
 
@@ -101,7 +105,7 @@ class MainWindow(QMainWindow):
         root.setSpacing(10)
         self.tabs = QTabWidget()
         self.tabs.addTab(self._build_dashboard(), "Dashboard")
-        self.tabs.addTab(self._build_chart_tab(), "Chart")
+        self.tabs.addTab(self._build_chart_tab(), "Charts")
         self.tabs.addTab(self._build_history_tab(), "History")
         self.tabs.addTab(self._build_performance_tab(), "Performance")
         self.tabs.addTab(self._build_backtest_tab(), "Backtest")
@@ -297,12 +301,58 @@ class MainWindow(QMainWindow):
 
     def _build_chart_tab(self) -> QWidget:
         page = QWidget()
-        v = QVBoxLayout(page)
-        note = QLabel("Chart is informational only and does not predict prices.")
-        note.setStyleSheet(f"color:{C_MUTED};")
-        v.addWidget(note)
+        page_layout = QVBoxLayout(page)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        v = QVBoxLayout(content)
+        v.setSpacing(12)
+
+        tradingview_group = QGroupBox("TradingView Market Chart")
+        tradingview_layout = QVBoxLayout(tradingview_group)
+        controls = QHBoxLayout()
+        controls.addWidget(QLabel("Symbol"))
+        self.tradingview_symbol = QLineEdit("FX:EURUSD")
+        self.tradingview_symbol.setPlaceholderText("e.g. FX:EURUSD or OANDA:XAUUSD")
+        controls.addWidget(self.tradingview_symbol, 2)
+        controls.addWidget(QLabel("Interval"))
+        self.tradingview_interval = QComboBox()
+        self.tradingview_interval.addItems(["1", "5", "15", "30", "60", "240", "D", "W", "M"])
+        self.tradingview_interval.setCurrentText("15")
+        controls.addWidget(self.tradingview_interval)
+        load_chart = QPushButton("Load TradingView Chart")
+        load_chart.clicked.connect(self._load_tradingview_chart)
+        controls.addWidget(load_chart)
+        tradingview_layout.addLayout(controls)
+        self.tradingview_chart = TradingViewChart()
+        tradingview_layout.addWidget(self.tradingview_chart)
+        tv_note = QLabel(
+            "TradingView prices come from TradingView data providers and may differ from your broker's MT5 prices."
+        )
+        tv_note.setWordWrap(True)
+        tv_note.setStyleSheet(f"color:{C_MUTED};")
+        tradingview_layout.addWidget(tv_note)
+        v.addWidget(tradingview_group)
+
+        mt5_group = QGroupBox("MT5 Market Chart")
+        mt5_layout = QVBoxLayout(mt5_group)
         self.candle_chart = CandleChart()
-        v.addWidget(self.candle_chart)
+        mt5_layout.addWidget(self.candle_chart)
+        mt5_note = QLabel("MT5 closed candles for the selected broker symbol.")
+        mt5_note.setStyleSheet(f"color:{C_MUTED};")
+        mt5_layout.addWidget(mt5_note)
+        v.addWidget(mt5_group)
+
+        self.equity_chart = LineChart("Closed-trade equity curve")
+        v.addWidget(self.equity_chart)
+        self.bt_chart = LineChart("Backtest equity curve")
+        v.addWidget(self.bt_chart)
+        v.addStretch()
+
+        scroll.setWidget(content)
+        page_layout.addWidget(scroll)
+        self.cmb_symbol.currentTextChanged.connect(self._sync_tradingview_symbol)
+        self.tradingview_chart.load_chart("FX:EURUSD", "15")
         return page
 
     def _build_history_tab(self) -> QWidget:
@@ -335,8 +385,6 @@ class MainWindow(QMainWindow):
             self.perf_labels[name] = card.value_label
             row.addWidget(card)
         v.addLayout(row)
-        self.equity_chart = LineChart("Closed-trade equity curve")
-        v.addWidget(self.equity_chart)
         note = QLabel("Metrics use locally recorded closed bot trades only. Past results do not guarantee future results.")
         note.setWordWrap(True); note.setStyleSheet(f"color:{C_MUTED};")
         v.addWidget(note)
@@ -360,8 +408,6 @@ class MainWindow(QMainWindow):
         self.bt_result.setWordWrap(True)
         self.bt_result.setStyleSheet(f"color:{C_WHITE}; font-size:14px;")
         v.addWidget(self.bt_result)
-        self.bt_chart = LineChart("Backtest equity curve")
-        v.addWidget(self.bt_chart)
         warn = QLabel("Conservative simulation: entries on next bar, stop-loss assumed first on conflicting candles.")
         warn.setWordWrap(True); warn.setStyleSheet(f"color:{C_MUTED};")
         v.addWidget(warn)
@@ -420,9 +466,30 @@ class MainWindow(QMainWindow):
         ctrl.addWidget(presets)
         lic = QGroupBox("Subscription")
         lf = QFormLayout(lic)
-        self.set_lic_url = QLineEdit(str(self.db.get_setting("license_api_url","")))
+        default_license_api = os.getenv("MYTRADEBOT_LICENSE_API_URL", "")
+        self.set_lic_url = QLineEdit(
+            str(self.db.get_setting("license_api_url", default_license_api))
+        )
         self.set_lic_url.setPlaceholderText("https://licenses.yourdomain.com")
         lf.addRow("License API", self.set_lic_url)
+        self.lbl_subscription_status = QLabel(
+            "Locked — sign in with an active paid subscription to run the bot."
+        )
+        self.lbl_subscription_status.setWordWrap(True)
+        self.lbl_subscription_status.setStyleSheet(f"color:{C_MUTED};")
+        lf.addRow("Access", self.lbl_subscription_status)
+        self.btn_subscription_login = QPushButton("Sign in & check access")
+        self.btn_subscription_login.clicked.connect(self._check_paid_subscription)
+        lf.addRow(self.btn_subscription_login)
+        self.btn_account_portal = QPushButton("Open account & plans")
+        self.btn_account_portal.clicked.connect(self._open_account_portal)
+        lf.addRow(self.btn_account_portal)
+        subscription_note = QLabel(
+            "Free trials and pending payments do not unlock automated trading."
+        )
+        subscription_note.setWordWrap(True)
+        subscription_note.setStyleSheet(f"color:{C_MUTED}; font-size:11px;")
+        lf.addRow(subscription_note)
         ctrl.addWidget(lic)
         btn_save = QPushButton("Save Settings"); btn_save.setObjectName("btn_connect")
         btn_save.clicked.connect(self._save_settings)
@@ -525,6 +592,66 @@ class MainWindow(QMainWindow):
         self._log("Disconnected from MT5", "orange")
 
     @Slot()
+    def _check_paid_subscription(self) -> bool:
+        if not self.bridge.is_connected:
+            self.lbl_subscription_status.setText("Connect to MT5 to check this account.")
+            QMessageBox.warning(
+                self,
+                "MT5 Required",
+                "Connect to the MT5 account you want to use before checking subscription access.",
+            )
+            return False
+        account_login = self.bridge.get_account_info().login
+        status = self.license_manager.validate(account_login)
+        if not status.allowed:
+            if not self.license_manager.enabled:
+                self.lbl_subscription_status.setText(f"Locked — {status.message}")
+                QMessageBox.warning(self, "Paid Subscription Required", status.message)
+                return False
+            email, accepted = QInputDialog.getText(
+                self,
+                "MyTradeBot Account",
+                "Account email:",
+            )
+            if not accepted or not email.strip():
+                return False
+            password, accepted = QInputDialog.getText(
+                self,
+                "MyTradeBot Account",
+                "Account password:",
+                QLineEdit.EchoMode.Password,
+            )
+            if not accepted or not password:
+                return False
+            status = self.license_manager.activate(account_login, email.strip(), password)
+            password = ""
+        if not status.allowed:
+            self.lbl_subscription_status.setText(f"Locked — {status.message}")
+            QMessageBox.warning(self, "Paid Subscription Required", status.message)
+            return False
+        self.lbl_subscription_status.setText("Active — paid subscription verified for this MT5 account.")
+        self.lbl_subscription_status.setStyleSheet(f"color:{C_AMBER}; font-weight:700;")
+        self._log("Paid subscription verified for this MT5 account and device.", "green")
+        return True
+
+    @Slot()
+    def _open_account_portal(self) -> None:
+        api_url = self.set_lic_url.text().strip()
+        if not api_url:
+            QMessageBox.information(
+                self,
+                "Subscription Service Not Set",
+                "Set and save the owner-provided License API URL before opening the account portal.",
+            )
+            return
+        if not QDesktopServices.openUrl(QUrl(api_url)):
+            QMessageBox.warning(
+                self,
+                "Could Not Open Account Portal",
+                "Open the configured License API URL in your browser.",
+            )
+
+    @Slot()
     def _on_start_bot(self) -> None:
         if not self.bridge.is_connected:
             QMessageBox.warning(self, "Not Connected", "Connect to MT5 before starting the bot.")
@@ -535,9 +662,7 @@ class MainWindow(QMainWindow):
             return
         if self._trading_thread is not None:
             return
-        status = self.license_manager.validate(self.bridge.get_account_info().login)
-        if not status.allowed:
-            QMessageBox.warning(self, "License Required", status.message)
+        if not self._check_paid_subscription():
             return
         run_target = self.spn_run_target.value()
         min_conf   = self.spn_confidence.value() / 100.0
@@ -782,8 +907,28 @@ class MainWindow(QMainWindow):
 
     def _refresh_symbols(self) -> None:
         syms = self.bridge.get_symbols()
+        blocker = QSignalBlocker(self.cmb_symbol)
         self.cmb_symbol.clear()
         self.cmb_symbol.addItems(syms[:500])
+        del blocker
+        self._sync_tradingview_symbol(self.cmb_symbol.currentText())
+        self._load_tradingview_chart()
+
+    @Slot(str)
+    def _sync_tradingview_symbol(self, symbol: str) -> None:
+        mapped = tradingview_symbol_for_mt5(symbol)
+        if mapped:
+            self.tradingview_symbol.setText(mapped)
+
+    @Slot()
+    def _load_tradingview_chart(self) -> None:
+        try:
+            self.tradingview_chart.load_chart(
+                self.tradingview_symbol.text(),
+                self.tradingview_interval.currentText(),
+            )
+        except ValueError as exc:
+            QMessageBox.warning(self, "Invalid TradingView Chart", str(exc))
 
     def _refresh_positions(self) -> None:
         positions = self.bridge.get_positions()
