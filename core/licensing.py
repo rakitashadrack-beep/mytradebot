@@ -1,4 +1,4 @@
-"""Desktop license validation with an intentionally short offline grace period."""
+"""Desktop license validation; automated trading fails closed without paid access."""
 from __future__ import annotations
 
 import hashlib
@@ -26,13 +26,14 @@ class LicenseStatus:
 
 
 class LicenseManager:
-    """Checks a configured licensing API every few hours, with a 72-hour grace cache."""
-    def __init__(self, database, api_url: str = "", offline_grace_hours: int = 72,
-                 request_json=None) -> None:
+    """Checks a configured licensing API and fails closed when it is unavailable."""
+    def __init__(self, database, api_url: str = "", offline_grace_hours: int = 0,
+                 request_json=None, request_authorized_json=None) -> None:
         self.database = database
         self.api_url = api_url.rstrip("/")
         self.offline_grace = timedelta(hours=offline_grace_hours)
         self.request_json = request_json or self._request_json
+        self.request_authorized_json = request_authorized_json or self._request_authorized_json
 
     @property
     def enabled(self) -> bool:
@@ -40,7 +41,7 @@ class LicenseManager:
 
     def validate(self, mt5_account: int | str) -> LicenseStatus:
         if not self.enabled:
-            return LicenseStatus(True, "License checks are not configured for this development installation")
+            return LicenseStatus(False, "Set the paid subscription API URL in Settings before starting the bot")
         now = datetime.now(timezone.utc)
         try:
             response = self.request_json(f"{self.api_url}/licenses/validate", {
@@ -52,8 +53,42 @@ class LicenseManager:
                 self.database.set_setting("license_expires_at", response.get("expires_at", ""))
                 return LicenseStatus(True, "License validated", now)
             return LicenseStatus(False, "License validation was refused")
+        except urllib.error.HTTPError as exc:
+            if exc.code in {401, 403, 404}:
+                return LicenseStatus(False, "Active paid or developer access is required to run the bot")
+            return self._offline_status(now)
         except (OSError, ValueError, urllib.error.URLError):
             return self._offline_status(now)
+
+    def activate(self, mt5_account: int | str, email: str, password: str) -> LicenseStatus:
+        if not self.enabled:
+            return LicenseStatus(False, "Set the paid subscription API URL in Settings before signing in")
+        try:
+            login = self.request_json(f"{self.api_url}/auth/login", {
+                "email": email,
+                "password": password,
+            })
+            token = login.get("access_token")
+            if not isinstance(token, str) or not token:
+                return LicenseStatus(False, "The account service returned an invalid sign-in response")
+            result = self.request_authorized_json(
+                f"{self.api_url}/licenses/bind",
+                {"mt5_account": str(mt5_account), "device_id": device_id()},
+                {"Authorization": f"Bearer {token}"},
+            )
+            if result.get("valid") is True:
+                return LicenseStatus(True, "Bot access activated for this MT5 account and device")
+            return LicenseStatus(False, "The account service did not activate this device")
+        except urllib.error.HTTPError as exc:
+            if exc.code == 401:
+                return LicenseStatus(False, "Email or password is incorrect")
+            if exc.code == 403:
+                return LicenseStatus(False, "Active paid or developer access is required to run the bot")
+            if exc.code == 409:
+                return LicenseStatus(False, "This MT5 account and device are already linked to another account")
+            return LicenseStatus(False, f"Subscription service returned HTTP {exc.code}")
+        except (OSError, ValueError, urllib.error.URLError):
+            return LicenseStatus(False, "Could not reach the subscription service")
 
     def _offline_status(self, now: datetime) -> LicenseStatus:
         stored = self.database.get_setting("license_last_validated_at", "")
@@ -78,8 +113,16 @@ class LicenseManager:
 
     @staticmethod
     def _request_json(url: str, payload: dict) -> dict:
+        return LicenseManager._request_with_headers(url, payload, {})
+
+    @staticmethod
+    def _request_authorized_json(url: str, payload: dict, headers: dict[str, str]) -> dict:
+        return LicenseManager._request_with_headers(url, payload, headers)
+
+    @staticmethod
+    def _request_with_headers(url: str, payload: dict, headers: dict[str, str]) -> dict:
         request = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
-                                         headers={"Content-Type": "application/json"}, method="POST")
+                                         headers={"Content-Type": "application/json", **headers}, method="POST")
         with urllib.request.urlopen(request, timeout=10) as response:
             if response.status != 200:
                 raise OSError(f"License service returned HTTP {response.status}")

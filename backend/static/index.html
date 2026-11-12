@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10172a">
+  <meta name="description" content="Sign in or create your MyTradeBot account">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <title>MyTradeBot — Account</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #0D0D14;
+      color: #F0F4FF;
+      --panel: #13131F;
+      --line: #2A1F4A;
+      --muted: #8A8AAA;
+      --green: #FF6B00;
+      --blue: #7B2FFF;
+      --purple: #7B2FFF;
+      --gold: #FF6B00;
+      --red: #FF2D6B;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; }
+    button, input { font: inherit; }
+    button { min-height: 44px; cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .58; }
+    .shell { max-width: 1160px; margin: auto; padding: 18px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .brand { color: var(--green); font-size: 1.15rem; font-weight: 800; letter-spacing: .03em; }
+    .card { border: 1px solid var(--line); background: var(--panel); border-radius: 16px; padding: 20px; }
+    .auth { width: min(100%, 430px); margin: 10vh auto 28px; }
+    .account { margin: 24px 0; }
+    .hidden { display: none !important; }
+    h1 { font-size: clamp(1.55rem, 5vw, 2.2rem); margin: 0 0 8px; }
+    h2 { font-size: 1.05rem; }
+    p { color: var(--muted); line-height: 1.55; }
+    .field { display: grid; gap: 6px; margin: 14px 0; }
+    label { color: var(--muted); font-size: .88rem; }
+    input { width: 100%; padding: 12px; color: #F0F4FF; background: #0A0A12; border: 1px solid var(--line); border-radius: 9px; }
+    input:focus { outline: 2px solid var(--green); outline-offset: 1px; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .primary, .secondary, .quiet { border-radius: 9px; padding: 10px 14px; font-weight: 700; }
+    .primary { color: #000; background: var(--green); border: 0; }
+    .secondary { color: #F0F4FF; background: #13131F; border: 1px solid var(--line); }
+    .quiet { color: var(--muted); background: transparent; border: 1px solid var(--line); }
+    .auth-submit { width: 100%; margin-top: 6px; }
+    .auth-switch { display: block; width: 100%; margin-top: 12px; text-align: center; }
+    .message { min-height: 1.4em; color: var(--gold); font-size: .9rem; }
+    .notice { border-left: 3px solid var(--gold); padding: 10px 12px; background: #1E1A35; color: #F0F4FF; border-radius: 5px; font-size: .9rem; line-height: 1.5; }
+    .status { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--muted); }
+    .status strong { color: #fff; }
+    .table-wrap { width: 100%; overflow-x: auto; margin-top: 12px; }
+    table { width: 100%; min-width: 650px; border-collapse: collapse; font-size: .85rem; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { color: var(--muted); font-weight: 600; }
+    .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+    .plan { display: flex; flex-direction: column; min-width: 0; }
+    .plan.pro { border-top: 3px solid var(--blue); }
+    .plan.ultimate { border: 2px solid var(--purple); }
+    .plan.platinum { border-top: 3px solid var(--gold); }
+    .tag { color: var(--purple); font-size: .75rem; font-weight: 800; letter-spacing: .08em; }
+    .price { font-size: 1.9rem; font-weight: 800; margin: 6px 0 12px; }
+    .price small { color: var(--muted); font-size: .85rem; font-weight: 500; }
+    ul { padding-left: 20px; color: var(--muted); line-height: 1.7; flex: 1; }
+    .plan .primary, .plan .secondary { width: 100%; }
+    .muted { color: var(--muted); font-size: .85rem; }
+    footer { padding: 24px 0; color: var(--muted); font-size: .82rem; }
+    @media (max-width: 760px) {
+      .shell { padding: 12px; }
+      .plans { grid-template-columns: 1fr; }
+      .auth { margin-top: 4vh; }
+      .card { padding: 16px; border-radius: 12px; }
+      header { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="brand">MYTRADEBOT</div>
+      <button id="install" class="quiet hidden" type="button">Install app</button>
+    </header>
+
+    <section id="login" class="card auth">
+      <h1 id="auth-title">Welcome back</h1>
+      <p id="auth-description">Sign in to your trading workspace.</p>
+      <form id="auth-form">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" maxlength="254" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required>
+        </div>
+        <button id="auth-submit" class="primary auth-submit" type="submit">Sign in</button>
+      </form>
+      <button id="auth-switch" class="quiet auth-switch" type="button">New here? Create an account</button>
+      <details id="owner-setup" class="hidden">
+        <summary class="muted">First-time owner setup</summary>
+        <div class="field">
+          <label for="admin-bootstrap">Private one-time setup token</label>
+          <input id="admin-bootstrap" type="password" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="owner-phone">Owner phone number (international format)</label>
+          <input id="owner-phone" type="tel" autocomplete="tel" placeholder="+2547XXXXXXXX"
+                 pattern="^\+[1-9]\d{7,14}$">
+        </div>
+      </details>
+      <div id="login-message" class="message" role="status" aria-live="polite"></div>
+      <p class="muted">Use a unique password with at least 12 characters. Password recovery is not available yet.</p>
+    </section>
+
+    <section id="workspace" class="hidden">
+      <div class="card account">
+        <div class="row" style="justify-content:space-between">
+          <div>
+            <h1>Account</h1>
+            <div id="identity" class="status"></div>
+          </div>
+          <button id="sign-out" class="quiet" type="button">Sign out</button>
+        </div>
+        <div id="subscription" class="status" style="margin-top:16px"></div>
+        <p class="notice" style="margin-top:16px">
+          A trial account does not unlock automated trading. The bot requires provider-confirmed payment, except for the configured developer test account. This account portal cannot remotely control MT5; use the local app on the trading computer.
+        </p>
+      </div>
+
+        <section id="admin-panel" class="card hidden" style="margin-bottom:20px">
+          <h2>Administrator — subscriptions</h2>
+          <p class="muted">Customer and plan data is visible only to the configured administrator.</p>
+          <div id="admin-summary" class="status"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Phone</th><th>Email</th><th>Plan</th><th>Status</th><th>Expires</th><th>Action</th></tr></thead>
+              <tbody id="admin-subscriptions"></tbody>
+            </table>
+          </div>
+          <h2 style="margin-top:22px">Payment activity</h2>
+          <div id="admin-payment-summary" class="status"></div>
+          <p class="muted">Only provider-confirmed payments appear as received. Checkout is currently disabled; no real payments can be made through this portal.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Customer</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th><th>Receipt</th></tr></thead>
+              <tbody id="admin-payments"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="row" style="justify-content:space-between">
+        <div>
+          <h1>Plans</h1>
+          <p>Prices are monthly USD display prices. These are planned tiers, not active paid entitlements; checkout stays disabled until promised features and payment flows are implemented and tested.</p>
+        </div>
+      </div>
+      <div class="plans" id="plans"></div>
+      <p id="plan-note" class="muted"></p>
+    </section>
+
+    <footer>
+      Trading involves substantial risk; no strategy guarantees profit.       Never share your password or broker credentials.
+    </footer>
+  </main>
+  <script>
+    let accessToken = null;
+    let installPrompt = null;
+    let authMode = "login";
+    const $ = id => document.getElementById(id);
+    const message = (text, isError = false) => {
+      $("login-message").textContent = text;
+      $("login-message").style.color = isError ? "var(--red)" : "var(--gold)";
+    };
+
+    async function authenticate(event) {
+      event.preventDefault();
+      const button = $("auth-submit");
+      button.disabled = true;
+      const email = $("email").value.trim();
+      const password = $("password").value;
+      const headers = {"Content-Type": "application/json"};
+      const adminBootstrapToken = $("admin-bootstrap").value.trim();
+      const phoneNumber = $("owner-phone").value.trim();
+      if (authMode === "register" && adminBootstrapToken) {
+        headers["X-Admin-Bootstrap-Token"] = adminBootstrapToken;
+      }
+      const payload = {email, password};
+      if (authMode === "register" && phoneNumber) payload.phone_number = phoneNumber;
+      try {
+        const response = await fetch(authMode === "login" ? "/auth/login" : "/auth/register", {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          if (result.detail === "Administrator bootstrap authorization required") {
+            throw new Error("Admin setup needs the private one-time setup token. Ask the site owner to finish setup securely.");
+          }
+          throw new Error(result.detail || "Could not create your account.");
+        }
+        accessToken = result.access_token;
+        await loadWorkspace();
+      } catch (error) {
+        message(error.message || "Something went wrong. Please try again.", true);
+      } finally {
+        $("admin-bootstrap").value = "";
+        $("owner-phone").value = "";
+        button.disabled = false;
+      }
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      const creating = mode === "register";
+      $("auth-title").textContent = creating ? "Create your account" : "Welcome back";
+      $("auth-description").textContent = creating
+        ? "One account. Your trading workspace starts here."
+        : "Sign in to your trading workspace.";
+      $("password").autocomplete = creating ? "new-password" : "current-password";
+      $("auth-submit").textContent = creating ? "Create account" : "Sign in";
+      $("auth-switch").textContent = creating
+        ? "Already have an account? Sign in"
+        : "New here? Create an account";
+      $("owner-setup").classList.toggle("hidden", !creating);
+      $("login-message").textContent = "";
+    }
+
+    async function loadWorkspace() {
+      const response = await fetch("/account", {
+        headers: {Authorization: `Bearer ${accessToken}`}
+      });
+      if (!response.ok) {
+        accessToken = null;
+        throw new Error("Session expired. Sign in again.");
+      }
+      const data = await response.json();
+      const billing = await fetch("/billing/availability").then(async billingResponse => {
+        if (!billingResponse.ok) throw new Error("Could not check checkout availability.");
+        return billingResponse.json();
+      });
+      $("identity").replaceChildren();
+      for (const value of [data.phone_number || "Phone unavailable", data.email]) {
+        const item = document.createElement("span");
+        item.textContent = value;
+        $("identity").append(item);
+      }
+      const subscription = data.subscription;
+      $("subscription").replaceChildren();
+      const statusText = subscription
+        ? `${subscription.plan} — ${subscription.status} until ${new Date(subscription.expires_at).toLocaleDateString()}`
+        : "No active plan";
+      const status = document.createElement("strong");
+      status.textContent = statusText;
+      $("subscription").append(status);
+      renderPlans(data.plans, billing);
+      if (data.is_admin) await loadAdminDashboard();
+      $("login").classList.add("hidden");
+      $("workspace").classList.remove("hidden");
+    }
+
+    async function loadAdminDashboard() {
+      const response = await fetch("/admin/dashboard/json", {
+        headers: {Authorization: `Bearer ${accessToken}`}
+      });
+      if (!response.ok) throw new Error("Could not load administrator dashboard.");
+      const data = await response.json();
+      $("admin-summary").replaceChildren();
+      for (const [label, value] of [
+        ["Users", data.users],
+        ["Paid licenses", data.active_licenses],
+        ["Subscriptions", data.subscriptions.length]
+      ]) {
+        const item = document.createElement("span");
+        item.textContent = `${label}: ${value}`;
+        $("admin-summary").append(item);
+      }
+      const body = $("admin-subscriptions");
+      body.replaceChildren();
+      for (const row of data.subscriptions) {
+        const tr = document.createElement("tr");
+        for (const value of [
+          row.phone_number || "—",
+          row.email,
+          row.plan,
+          row.status,
+          new Date(row.expires_at).toLocaleDateString()
+        ]) {
+          const td = document.createElement("td");
+          td.textContent = value;
+          tr.append(td);
+        }
+        const action = document.createElement("td");
+        if (row.status === "trialing" || row.status === "active") {
+          const revoke = document.createElement("button");
+          revoke.className = "quiet";
+          revoke.type = "button";
+          revoke.textContent = "Revoke";
+          revoke.addEventListener("click", () => revokeSubscription(row.id));
+          action.append(revoke);
+        } else {
+          action.textContent = "—";
+        }
+        tr.append(action);
+        body.append(tr);
+      }
+      $("admin-panel").classList.remove("hidden");
+      $("admin-payment-summary").replaceChildren();
+      for (const [label, value] of [
+        ["Payments", data.payment_summary.count],
+        ["Confirmed", data.payment_summary.successful],
+        ["Pending", data.payment_summary.pending],
+        ["Received", `KES ${Number(data.payment_summary.received_kes).toLocaleString()}`]
+      ]) {
+        const item = document.createElement("span");
+        item.textContent = `${label}: ${value}`;
+        $("admin-payment-summary").append(item);
+      }
+      const payments = $("admin-payments");
+      payments.replaceChildren();
+      for (const payment of data.payments) {
+        const tr = document.createElement("tr");
+        for (const value of [
+          new Date(payment.created_at).toLocaleString(),
+          payment.email,
+          payment.phone_number,
+          payment.plan,
+          `KES ${Number(payment.amount_kes).toLocaleString()}`,
+          payment.status,
+          payment.receipt_number || "—"
+        ]) {
+          const td = document.createElement("td");
+          td.textContent = value;
+          tr.append(td);
+        }
+        payments.append(tr);
+      }
+    }
+
+    async function revokeSubscription(id) {
+      const reason = prompt("Reason for revoking this subscription:");
+      if (!reason || reason.trim().length < 3) return;
+      const response = await fetch(`/admin/subscriptions/${encodeURIComponent(id)}/revoke`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({reason: reason.trim()})
+      });
+      if (!response.ok) {
+        $("plan-note").textContent = "Subscription revocation failed. Check administrator access and try again.";
+        return;
+      }
+      await loadAdminDashboard();
+    }
+
+    function renderPlans(plans, billing) {
+      const root = $("plans");
+      root.replaceChildren();
+      for (const plan of plans) {
+        const card = document.createElement("article");
+        card.className = `card plan ${plan.id}`;
+        const tag = document.createElement("div");
+        tag.className = "tag";
+        tag.textContent = plan.id === "ultimate" ? "MOST POPULAR" : plan.name.toUpperCase();
+        const heading = document.createElement("h2");
+        heading.textContent = plan.name;
+        const price = document.createElement("div");
+        price.className = "price";
+        price.textContent = `$${plan.monthly_price_usd}`;
+        const period = document.createElement("small");
+        period.textContent = " / month";
+        price.append(period);
+        const kesPrice = billing.monthly_prices_kes?.[plan.id];
+        if (kesPrice) {
+          const localPrice = document.createElement("div");
+          localPrice.className = "muted";
+          localPrice.textContent = `KES ${Number(kesPrice).toLocaleString()} at M-Pesa checkout`;
+          price.append(localPrice);
+        }
+        const list = document.createElement("ul");
+        const limits = [
+          `${plan.daily_ai_analyses} AI analyses per day`,
+          plan.custom_setups_per_day === null
+            ? "Unlimited custom setups"
+            : `${plan.custom_setups_per_day} custom setups per day`,
+          `${plan.mt5_account_limit} MT5 account${plan.mt5_account_limit === 1 ? "" : "s"}`
+        ];
+        if (plan.monthly_ai_credits) limits.push(`${plan.monthly_ai_credits.toLocaleString()} AI credits per month`);
+        for (const text of limits) {
+          const item = document.createElement("li");
+          item.textContent = text;
+          list.append(item);
+        }
+        const unavailable = document.createElement("p");
+        unavailable.className = "muted";
+        unavailable.textContent = "Planned tier limits only. AI features are not enabled in this release.";
+        const upgrade = document.createElement("button");
+        upgrade.className = plan.id === "pro" ? "secondary" : "primary";
+        upgrade.type = "button";
+        upgrade.disabled = !billing.enabled;
+        upgrade.textContent = billing.enabled ? `Upgrade to ${plan.name}` : "Checkout not available yet";
+        upgrade.addEventListener("click", () => checkoutPlan(plan.id, upgrade));
+        card.append(tag, heading, price, list, unavailable, upgrade);
+        root.append(card);
+      }
+      $("plan-note").textContent = billing.message;
+    }
+
+    async function checkoutPlan(plan, button) {
+      button.disabled = true;
+      $("plan-note").textContent = "Starting a customer-approved M-Pesa prompt…";
+      try {
+        const response = await fetch("/subscriptions/checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({plan})
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.detail || "Could not start payment.");
+        $("plan-note").textContent = `${result.message} Amount: KES ${Number(result.amount_kes).toLocaleString()}.`;
+        for (let attempt = 0; attempt < 30; attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 4000));
+          const statusResponse = await fetch(`/subscriptions/payments/${encodeURIComponent(result.payment_id)}`, {
+            headers: {Authorization: `Bearer ${accessToken}`}
+          });
+          if (!statusResponse.ok) throw new Error("Could not check payment status.");
+          const payment = await statusResponse.json();
+          if (payment.status === "paid") {
+            $("plan-note").textContent = "Payment confirmed. Your plan is active.";
+            await loadWorkspace();
+            return;
+          }
+          if (payment.status === "failed") {
+            throw new Error("Payment was not completed. You can try again.");
+          }
+        }
+        $("plan-note").textContent = "Payment is still pending. Your plan changes only after Safaricom confirms payment.";
+      } catch (error) {
+        $("plan-note").textContent = error.message || "Payment could not be completed.";
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    $("auth-form").addEventListener("submit", authenticate);
+    $("auth-switch").addEventListener("click", () => {
+      setAuthMode(authMode === "login" ? "register" : "login");
+    });
+    $("sign-out").addEventListener("click", () => {
+      accessToken = null;
+      $("workspace").classList.add("hidden");
+      $("admin-panel").classList.add("hidden");
+      $("login").classList.remove("hidden");
+      $("password").value = "";
+      $("owner-phone").value = "";
+      $("admin-bootstrap").value = "";
+      setAuthMode("login");
+    });
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/service-worker.js").catch(error => {
+        console.warn("MyTradeBot offline shell could not be installed.", error);
+      });
+    }
+    window.addEventListener("beforeinstallprompt", event => {
+      event.preventDefault();
+      installPrompt = event;
+      $("install").classList.remove("hidden");
+    });
+    $("install").addEventListener("click", async () => {
+      if (!installPrompt) return;
+      await installPrompt.prompt();
+      installPrompt = null;
+      $("install").classList.add("hidden");
+    });
+  </script>
+</body>
+</html>
