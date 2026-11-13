@@ -1392,5 +1392,3 @@ def _sms_provider(settings: Settings) -> SmsProvider | None:
         )
     raise RuntimeError("SMS_PROVIDER must be disabled or africastalking")
 
-
-app = create_app()

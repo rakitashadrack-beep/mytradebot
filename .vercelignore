@@ -1,8 +1,10 @@
-# Desktop app — not needed on Vercel
+# Desktop and local app — not needed on Vercel
 ui/
 main.py
 web/
 web_main.py
+desktop_main.py
+portal_main.py
 core/
 installer/
 scripts/
@@ -16,6 +18,7 @@ logs/
 
 # Local databases (never deploy these)
 *.db
+*.sqlite*
 
 # Build artifacts
 dist/
@@ -31,5 +34,8 @@ __pycache__/
 .aws/
 pyproject.toml
 pytest.ini
+
+# Root requirements are for the desktop app; Vercel uses api/requirements.txt
+requirements.txt
 requirements-build-windows.txt
 requirements-windows.txt
