@@ -58,7 +58,7 @@ async def apply_browser_security_headers(request: Request, call_next):
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
         "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "
         "img-src 'self' data: blob:; "
-        "connect-src 'self'; "
+        "connect-src 'self' https://cdn.jsdelivr.net; "
         "object-src 'none'; base-uri 'self'; form-action 'self'; "
         "frame-ancestors 'none'; worker-src 'self'"
     )

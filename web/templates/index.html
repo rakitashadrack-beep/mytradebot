@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="theme-color" content="#13131F"/>
 <meta name="description" content="MyTradeBot trading dashboard with account, charts, controls and news context."/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <link rel="manifest" href="/manifest.webmanifest"/>
@@ -699,17 +700,22 @@ let pendingInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', event => {
   event.preventDefault();
   pendingInstallPrompt = event;
+  document.getElementById('install-app').style.display = 'inline-flex';
+});
+window.addEventListener('appinstalled', () => {
+  pendingInstallPrompt = null;
+  document.getElementById('install-app').style.display = 'none';
 });
 
 async function installApp() {
   if (!pendingInstallPrompt) {
-    toast('On Android, use your browser menu and choose Install app or Add to Home screen.');
+    toast('Use your browser menu → Install app or Add to Home screen.');
     return;
   }
-  pendingInstallPrompt.prompt();
-  const choice = await pendingInstallPrompt.userChoice;
+  const prompt = pendingInstallPrompt;
   pendingInstallPrompt = null;
-  if (choice.outcome === 'accepted') toast('MyTradeBot was added to your home screen.');
+  document.getElementById('install-app').style.display = 'none';
+  await prompt.prompt();
 }
 
 if ('serviceWorker' in navigator) {
@@ -725,18 +731,33 @@ async function submitAccountForm(event) {
   const password = document.getElementById('account-password').value;
   const headers = {'Content-Type':'application/json'};
   const setupToken = document.getElementById('setup-token').value.trim();
-  if (accountMode === 'register' && setupToken) headers['X-Admin-Bootstrap-Token'] = setupToken;
+  if (setupToken) headers['X-Admin-Bootstrap-Token'] = setupToken;
   const payload = {email, password};
   const phone = document.getElementById('account-phone').value.trim();
-  if (accountMode === 'register' && phone) payload.phone_number = phone;
+  if (phone) payload.phone_number = phone;
   button.disabled = true;
   setAccessMessage('');
   try {
-    const response = await fetch(`${ACCOUNT_API}/auth/${accountMode === 'register' ? 'register' : 'login'}`, {
-      method:'POST', headers, body:JSON.stringify(payload)
+    // Always try login first; auto-register if account doesn't exist yet
+    let response = await fetch(`${ACCOUNT_API}/auth/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, password})
     });
+    if (response.status === 401) {
+      const reg = await fetch(`${ACCOUNT_API}/auth/register`, {
+        method:'POST', headers, body:JSON.stringify(payload)
+      });
+      if (reg.ok) {
+        response = reg;
+      } else {
+        const e = await reg.json();
+        if (reg.status === 409) throw new Error('Incorrect password.');
+        throw new Error(e.detail || 'Sign in failed.');
+      }
+    } else if (!response.ok) {
+      const e = await response.json();
+      throw new Error(e.detail || 'Account request failed.');
+    }
     const result = await response.json();
-    if (!response.ok) throw new Error(result.detail || 'Account request failed.');
     accountAccessToken = result.access_token;
     document.getElementById('account-password').value = '';
     document.getElementById('setup-token').value = '';
