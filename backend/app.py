@@ -57,7 +57,10 @@ def normalize_phone_number(value: str) -> str:
 class Settings:
     def __init__(self) -> None:
         self.environment = os.getenv("MYTRADEBOT_ENV", "development")
-        self.database_url = os.getenv("DATABASE_URL", "sqlite:///./mytradebot-licenses.db")
+        # Default to /tmp on serverless (Vercel filesystem is read-only except /tmp).
+        # In production always set DATABASE_URL to a PostgreSQL connection string.
+        _default_db = "sqlite:////tmp/mytradebot-licenses.db"
+        self.database_url = os.getenv("DATABASE_URL", _default_db)
         self.jwt_secret = os.getenv("JWT_SECRET", "development-only-change-me")
         self.license_secret = os.getenv("LICENSE_SIGNING_SECRET", self.jwt_secret)
         self.admin_email = os.getenv("ADMIN_EMAIL", "rakitashadrack@gmail.com").lower()
