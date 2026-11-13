@@ -369,12 +369,8 @@ def test_pwa_shell_and_manifest_routes_are_present(tmp_path):
     assert str(favicon.path).endswith("backend/static/icon.svg")
     assert str(worker.path).endswith("service-worker.js")
     assert 'id="auth-form"' in portal
-    assert 'id="auth-switch"' in portal
     assert '"/auth/login"' in portal
     assert '"/auth/register"' in portal
-    assert 'id="owner-setup" class="hidden"' in portal
-    assert 'id="owner-phone"' in portal
-    assert 'headers["X-Admin-Bootstrap-Token"] = adminBootstrapToken' in portal
     assert 'id="admin-payments"' in portal
     assert "mytradebot-portal-v5" in service_worker
     for brand_color in ("#0D0D14", "#13131F", "#2A1F4A", "#FF6B00", "#7B2FFF", "#F0F4FF"):

@@ -566,10 +566,11 @@ def create_app(
 
     @app.post("/auth/login")
     def login(request: LoginRequest):
-        user = database.one("SELECT * FROM users WHERE email=?", (request.email.lower(),))
+        email = request.email.lower()
+        user = database.one("SELECT * FROM users WHERE email=?", (email,))
         if not user or not _verify_password(request.password, row_value(user, "password_hash")):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
-        if request.email.lower() == settings.developer_email:
+        if email in {settings.developer_email, settings.admin_email}:
             grant_developer_access(str(row_value(user, "id")), utc_now())
         return {"access_token": issue_access_token(user), "token_type": "bearer"}
 
