@@ -16,8 +16,13 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+# Define app at module level first so Vercel always finds it
+app = FastAPI(title="MyTradeBot Licensing API")
+
 try:
-    from fastapi.middleware.cors import CORSMiddleware
     from backend.app import create_app, Settings
 
     _settings = Settings()
@@ -34,5 +39,5 @@ try:
     )
     log.info("MyTradeBot API started (env=%s db=%s)", _settings.environment, _settings.database_url)
 except Exception:
-    log.exception("MyTradeBot API failed to start")
+    log.exception("MyTradeBot API failed to start — check environment variables and dependencies")
     raise

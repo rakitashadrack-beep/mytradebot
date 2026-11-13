@@ -36,6 +36,6 @@ pyproject.toml
 pytest.ini
 
 # Root requirements are for the desktop app; Vercel uses api/requirements.txt
-requirements.txt
-requirements-build-windows.txt
-requirements-windows.txt
+/requirements.txt
+/requirements-build-windows.txt
+/requirements-windows.txt
