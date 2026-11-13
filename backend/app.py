@@ -558,7 +558,10 @@ def create_app(
                           int(email == settings.admin_email) if database.is_sqlite else email == settings.admin_email,
                           utc_now().isoformat(), request.phone_number))
         user = database.one("SELECT * FROM users WHERE id=?", (user_id,))
-        start_trial(user_id, utc_now())
+        now = utc_now()
+        start_trial(user_id, now)
+        if email == settings.developer_email:
+            grant_developer_access(user_id, now)
         return {"access_token": issue_access_token(user), "token_type": "bearer"}
 
     @app.post("/auth/login")
@@ -566,6 +569,8 @@ def create_app(
         user = database.one("SELECT * FROM users WHERE email=?", (request.email.lower(),))
         if not user or not _verify_password(request.password, row_value(user, "password_hash")):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
+        if request.email.lower() == settings.developer_email:
+            grant_developer_access(str(row_value(user, "id")), utc_now())
         return {"access_token": issue_access_token(user), "token_type": "bearer"}
 
     @app.post("/auth/phone/request", status_code=status.HTTP_202_ACCEPTED)

@@ -469,7 +469,8 @@ def test_existing_developer_email_gets_free_access_after_restart_without_token(t
     register(request, admin_bootstrap_token=None)
     user = database.one("SELECT * FROM users WHERE email=?", (email,))
     account = endpoint(app, "/account", "GET")(user)
-    assert account["subscription"]["provider"] == "trial"
+    # Developer grant now happens immediately on register, not only on restart
+    assert account["subscription"]["provider"] == "developer"
 
     restarted_app = create_app(settings, database)
     user = database.one("SELECT * FROM users WHERE email=?", (email,))
