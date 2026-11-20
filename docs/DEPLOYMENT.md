@@ -18,8 +18,8 @@ Enable MFA on every account before continuing.
 ## 3. Deploy licensing API to Vercel
 
 1. Push this project to a private Git repository.
-2. Import it into Vercel with the repository root (`./`) as the project root. The root `vercel.json` builds `api/index.py` and routes requests to it. Do not select `/api` or `/backend` as a separate project root for this configuration.
-3. Select Python 3.13; `.python-version` and `pyproject.toml` declare this already.
+2. Import it into Vercel with the repository root (`./`) as the project root. The root `vercel.json` routes every request to `api/index.py` and explicitly bundles the `backend/` package. Do not select `/api` or `/backend` as a separate project root for this configuration.
+3. Use Python 3.12; `.python-version` pins this version and `pyproject.toml` permits it.
 4. In Vercel Production Environment Variables, enter the required values for your selected production providers. `.env.example` contains placeholders, not usable credentials; never upload it or copy placeholder values as production settings.
 5. Generate `JWT_SECRET`, `LICENSE_SIGNING_SECRET`, and `ADMIN_BOOTSTRAP_TOKEN` separately, each at least 32 random characters.
 6. Set `MYTRADEBOT_ENV=production`, a PostgreSQL `DATABASE_URL`, `PAYMENT_PROVIDER=mpesa_daraja`, `MPESA_ENVIRONMENT=production`, exact allowed CORS origins, and `SMS_PROVIDER=africastalking` with its private username and API key. Enter all Daraja credentials, the HTTPS callback URL/token, and KES prices privately in the deployment settings.
