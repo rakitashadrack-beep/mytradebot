@@ -20,11 +20,14 @@ cd /path/to/mytradebot
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m pip install -r apps/trading-agent/requirements.txt
+python -m pip install -r apps/backend/backend/requirements.txt
 pytest -q tests tests_backend
 ```
 
 Linux is suitable for source development, tests, and offline backtesting. The official MT5 Python integration and live execution target are Windows.
+
+Use Python 3.11–3.13 on both systems (the project pins 3.12). Linux and Windows must use separate virtual environments; do not copy `.venv` between operating systems. On Windows, MT5 Desktop and this application must run under the same Windows user account. The installed Windows application saves its database, logs, and optional private `.env` file under `%LOCALAPPDATA%\MyTradeBot`, rather than inside the install directory, so updates do not overwrite trading history or require administrator write access.
 
 ## Windows demo setup
 
@@ -33,12 +36,14 @@ cd C:\path\to\mytradebot
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-pip install -r requirements-windows.txt
+pip install -r apps\trading-agent\requirements-windows.txt
 pytest -q tests tests_backend
-python main.py
+python apps\trading-agent\main.py
 ```
 
-`python main.py` starts the unified browser app and opens `http://127.0.0.1:8000`. Keep the terminal open. The browser app includes account sign-in, plans, MT5 connection, bot controls, history, performance, and settings. The optional native window remains available with `python desktop_main.py`.
+`python apps\trading-agent\main.py` starts the local trading agent and opens `http://127.0.0.1:8000`. Keep the terminal open. The optional native window remains available with `python apps\trading-agent\desktop_main.py`.
+
+For the installed EXE, launch it from the Start Menu. It starts the same local-only browser interface. If you need private configuration such as a remote license API URL, create `%LOCALAPPDATA%\MyTradeBot\.env`; never place broker credentials there. Use `MYTRADEBOT_DATA_DIR` only when you deliberately need to relocate local databases and logs.
 
 Open MT5 Desktop with an Exness **demo** account first, then connect from the MyTradeBot browser page. Broker credentials are sent only to the local Windows app and the password field is cleared after connection. Never place broker credentials in source code, settings, or chat.
 
@@ -64,7 +69,7 @@ Do not use a real-money account for initial tests. Keep M-Pesa checkout disabled
 
 ## Deployment and release
 
-- Licensing API/Vercel: [Phase 6](docs/PHASE_06.md)
+- Separate Vercel portal and Render licensing API: [deployment guide](docs/SEPARATE_FRONTEND_BACKEND_DEPLOYMENT.md)
 - Installer and release: [Phase 7](docs/PHASE_07.md)
 - End-to-end deployment: [Production deployment runbook](docs/DEPLOYMENT.md)
 - Daily operation: [User guide](docs/USER_GUIDE.md)
@@ -74,14 +79,11 @@ Do not use a real-money account for initial tests. Keep M-Pesa checkout disabled
 ## Project layout
 
 ```text
-core/        Trading, risk, licensing, MT5, and backtest services
-ui/          PySide6 desktop screens and chart widgets
-backend/     FastAPI licensing and payment integration boundary
-api/         Vercel FastAPI entrypoint
-installer/   Inno Setup source
-scripts/     Windows build script
-tests*/      Unit tests
-docs/        Phase notes and operational/legal documentation
+apps/frontend/       Vercel PWA and runtime API URL configuration
+apps/backend/        Render licensing, account, and payment API
+apps/trading-agent/  Windows-only MT5 execution, risk, and local UI
+tests*/              Shared unit tests
+docs/                Phase notes and operational/legal documentation
 ```
 
 Assumption: all production secrets, payment accounts, code-signing certificates, DNS, and managed PostgreSQL are owned and configured by the product owner.

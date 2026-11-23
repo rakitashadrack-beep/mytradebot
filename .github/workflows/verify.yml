@@ -45,19 +45,54 @@ jobs:
 
       - name: Install project dependencies
         run: |
-          python -m pip install -r requirements.txt
-          python -m pip install -r backend/requirements.txt
+          python -m pip install -r apps/trading-agent/requirements.txt
+          python -m pip install -r apps/backend/backend/requirements.txt
 
       - name: Check Python syntax
         run: |
           python -m py_compile \
-            main.py \
-            core/*.py \
-            ui/*.py \
-            backend/*.py \
-            api/*.py
+            apps/trading-agent/main.py \
+            apps/trading-agent/core/*.py \
+            apps/trading-agent/ui/*.py \
+            apps/trading-agent/web/*.py \
+            apps/backend/backend/*.py \
+            apps/frontend/api/*.py
 
       - name: Run automated tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m pytest -q tests tests_backend
+
+  windows-tests:
+    name: Run Windows Compatibility Tests
+    runs-on: windows-2025
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install project dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r apps/trading-agent/requirements-windows.txt
+          python -m pip install -r apps/backend/backend/requirements.txt
+
+      - name: Check Python syntax
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem apps/trading-agent/main.py, apps/trading-agent/web_main.py, apps/trading-agent/desktop_main.py, apps/trading-agent/core/*.py, apps/trading-agent/ui/*.py, apps/trading-agent/web/*.py, apps/backend/backend/*.py, apps/backend/portal_main.py, apps/frontend/api/*.py
+          python -m py_compile $files.FullName
+
+      - name: Run automated tests
+        shell: pwsh
         env:
           QT_QPA_PLATFORM: offscreen
         run: |

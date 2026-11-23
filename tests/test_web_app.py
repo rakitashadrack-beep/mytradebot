@@ -75,7 +75,7 @@ def test_same_origin_control_requests_are_allowed():
 
 
 def test_unified_web_app_exposes_installable_pwa_assets_without_caching_api_data():
-    assets = Path(__file__).parents[1] / "web" / "static"
+    assets = Path(__file__).parents[1] / "apps" / "trading-agent" / "web" / "static"
     manifest = json.loads((assets / "manifest.webmanifest").read_text())
     service_worker = (assets / "service-worker.js").read_text()
 
@@ -98,7 +98,6 @@ def test_unified_web_app_exposes_installable_pwa_assets_without_caching_api_data
         "/service-worker.js",
     }
     assert 'url.pathname.startsWith("/api/")' in service_worker
-    assert 'url.pathname.startsWith("/account-api/")' in service_worker
 
 
 def test_local_launcher_generates_distinct_random_development_secrets(monkeypatch):
@@ -157,4 +156,5 @@ def test_unified_app_serves_account_gate_before_bot_workspace():
     assert b"STOP BOT" in response.body
     assert b"US NFP & CPI calendar" in response.body
     assert b'rel="manifest" href="/manifest.webmanifest"' in response.body
-    assert any(route.path == "/account-api" for route in app.routes)
+    assert all(route.path != "/account-api" for route in app.routes)
+    assert b'const ACCOUNT_API = "";' in response.body

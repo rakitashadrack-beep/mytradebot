@@ -352,30 +352,37 @@ def test_africas_talking_sms_rejects_unsuccessful_provider_response(monkeypatch)
         )
 
 
-def test_pwa_shell_and_manifest_routes_are_present(tmp_path):
+def test_render_service_is_api_only(tmp_path):
     app, _, _ = phone_service(tmp_path)
     root = endpoint(app, "/", "GET")()
-    manifest = endpoint(app, "/manifest.webmanifest", "GET")()
-    favicon = endpoint(app, "/favicon.ico", "GET")()
-    worker = endpoint(app, "/service-worker.js", "GET")()
-    portal = root.path.read_text()
-    service_worker = worker.path.read_text()
-    trading_dashboard = (
-        Path(__file__).parents[1] / "web" / "templates" / "index.html"
-    ).read_text()
 
-    assert str(root.path).endswith("backend/static/index.html")
-    assert str(manifest.path).endswith("manifest.webmanifest")
-    assert str(favicon.path).endswith("backend/static/icon.svg")
-    assert str(worker.path).endswith("service-worker.js")
-    assert 'id="auth-form"' in portal
-    assert '"/auth/login"' in portal
-    assert '"/auth/register"' in portal
-    assert 'id="admin-payments"' in portal
-    assert "mytradebot-portal-v5" in service_worker
-    for brand_color in ("#0D0D14", "#13131F", "#2A1F4A", "#FF6B00", "#7B2FFF", "#F0F4FF"):
-        assert brand_color in portal
-        assert brand_color in trading_dashboard
+    assert root == {"service": "MyTradeBot Licensing API", "docs": "/docs"}
+    assert all(route.path not in {"/manifest.webmanifest", "/service-worker.js"}
+               for route in app.routes)
+
+
+def test_vercel_portal_reads_its_render_api_url_from_runtime_config():
+    root = Path(__file__).parents[1]
+    portal = (root / "apps" / "frontend" / "public" / "index.html").read_text()
+    vercel = (root / "apps" / "frontend" / "vercel.json").read_text()
+    render = (root / "apps" / "backend" / "render.yaml").read_text()
+
+    assert 'src="/config.js"' in portal
+    assert "window.MYTRADEBOT_API_URL" in portal
+    assert '"outputDirectory": "public"' in vercel
+    assert '"source": "/config.js"' in vercel
+    assert "uvicorn backend.app:app" in render
+
+
+def test_vercel_runtime_config_exposes_only_the_render_api_url(monkeypatch):
+    from api.index import frontend_config
+
+    monkeypatch.setenv("MYTRADEBOT_API_URL", "https://api.example.com/")
+    response = frontend_config()
+
+    assert response.media_type == "application/javascript"
+    assert response.headers["cache-control"] == "no-store"
+    assert response.body == b'window.MYTRADEBOT_API_URL="https://api.example.com";\n'
 
 
 def test_unpaid_legacy_checkout_cannot_activate_a_license(tmp_path):

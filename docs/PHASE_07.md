@@ -4,7 +4,7 @@ Status: complete as release-ready source assets; external signing, domain, payme
 
 ## Delivered
 
-- Windows build script using Python 3.11, PyInstaller, and a complete test gate.
+- Windows build script using Python 3.11–3.13, PyInstaller, and a complete test gate. It explicitly bundles the local web templates and PWA assets.
 - Inno Setup installer source for a 64-bit per-user Windows installer.
 - Update-manifest checker that verifies semantic versions and manifest SHA-256 format before showing an update; installer signing and hosted manifests remain release-owner responsibilities.
 - Vercel Python configuration, FastAPI entrypoint, production environment template, and deployment guide.
@@ -45,3 +45,5 @@ pytest -q tests tests_backend
 ```
 
 Assumption: production releases are built and signed on Windows because PyInstaller is not a cross-compiler for Windows executables.
+
+The installed application stores mutable data in `%LOCALAPPDATA%\MyTradeBot`, not under `Program Files`. This preserves history and logs across installer upgrades and avoids write-permission failures. A source checkout on Ubuntu continues to use its working directory unless `MYTRADEBOT_DATA_DIR` is set.

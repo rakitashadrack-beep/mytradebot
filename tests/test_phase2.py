@@ -66,6 +66,14 @@ def test_cooldown_and_margin_block_orders():
     assert "margin" in engine.evaluate(snapshot(free_margin=120), 100, FX, 50).reason.lower()
 
 
+def test_non_finite_risk_or_broker_data_is_rejected():
+    with pytest.raises(ValueError, match="finite"):
+        RiskSettings(max_spread_points=float("nan")).validate()
+    assert "not finite" in RiskEngine(RiskSettings()).evaluate(
+        snapshot(spread_points=float("nan")), 100, FX, 50
+    ).reason
+
+
 def test_database_realized_profit_window(tmp_path):
     db = Database(str(tmp_path / "risk.db"))
     db.insert_trade(1, "EURUSD", "BUY", .01, 1, 0, 0, 1, "", "", "2026-01-01T10:00:00")

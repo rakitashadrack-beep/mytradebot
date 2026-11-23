@@ -12,38 +12,38 @@ Status: complete and unit-tested locally.
 - Paid M-Pesa checkout remains disabled until its sandbox flow, renewal, and production configuration are verified.
 - PostgreSQL is required in production; SQLite is exclusively supported for local development/tests.
 - Process-local rate limiting is active. Deploy one instance or put a shared rate limiter/reverse proxy in front of multi-instance production deployments.
-- Vercel entrypoint, deployment configuration, and environment-variable template are included.
+- A Vercel static portal, separate Render API configuration, and environment-variable template are included.
 
 ## Files
 
 ```text
-backend/app.py             Licensing API and storage adapter
-backend/requirements.txt   Backend dependencies
-api/index.py               Vercel ASGI entrypoint
-vercel.json                Vercel routing/build configuration
-.env.example               Required production environment variables
-core/licensing.py          Desktop paid-subscription validation and activation
+apps/backend/backend/      Render licensing API and storage adapter
+apps/backend/render.yaml   Render API service configuration
+apps/frontend/public/      Vercel public portal assets
+apps/frontend/api/         Vercel runtime configuration endpoint
+apps/frontend/vercel.json  Vercel static-portal routing/build configuration
+apps/backend/.env.example  Required production environment variables
+apps/trading-agent/core/   Desktop paid-subscription validation and activation
 tests_backend/             Backend flow tests
 tests/test_licensing.py    Desktop licensing tests
 ```
 
-## Deploy to Vercel after you own a domain
+## Deploy frontend and API independently
 
-1. Create a managed PostgreSQL database from a provider you control; copy its TLS connection URL.
-2. Import this repository into Vercel and select the project root as the deploy directory.
-3. Add every value from `.env.example` as a Vercel Production Environment Variable, including a unique 32+ character `ADMIN_BOOTSTRAP_TOKEN`.
-4. Deploy, then verify `https://your-vercel-project.vercel.app/health` returns `{"status":"ok"}`.
-5. Add your domain in **Vercel → Project → Settings → Domains**, then place its final `https://licenses.yourdomain.com` URL in MyTradeBot’s **Strategy & Risk → Subscription → License API** field.
-6. Register the owner account using `ADMIN_EMAIL` and send `ADMIN_BOOTSTRAP_TOKEN` in the `X-Admin-Bootstrap-Token` request header. This token is required only for initial administrator registration; keep it private and do not send it over plain HTTP. Do not use the development defaults in production.
-
-Vercel itself does not include a persistent PostgreSQL database, so `DATABASE_URL` must point to your external managed PostgreSQL service.
+Deploy `apps/backend` to Render for the API and PostgreSQL connection. Deploy
+`apps/frontend` to Vercel for the static portal, configuring only
+`MYTRADEBOT_API_URL` there. Configure the Render API's `ALLOWED_ORIGINS` with
+the exact Vercel portal URL and `http://127.0.0.1:8000` for the local Windows
+agent. The complete sequence is in
+[the separate deployment guide](SEPARATE_FRONTEND_BACKEND_DEPLOYMENT.md).
 
 ## Local backend run and test
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r backend/requirements.txt
+pip install -r apps/backend/backend/requirements.txt
+export PYTHONPATH=apps/backend
 uvicorn backend.app:app --reload
 pytest tests_backend tests/test_licensing.py -q
 ```

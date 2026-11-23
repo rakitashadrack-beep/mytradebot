@@ -9,7 +9,7 @@ from core.risk import LotSizeMode, RiskEngine, RiskSettings
 from core.strategies import (BreakoutStrategy, Candle, CombinedStrategy, MomentumStrategy,
                              Signal, SignalSide, Strategy, TrendStrategy)
 from core.trading_engine import TradingConfig, TradingEngine
-from core.mt5_bridge import AccountInfo, TradeResult
+from core.mt5_bridge import AccountInfo, PositionInfo, TradeResult
 
 
 def candles(closes):
@@ -155,3 +155,32 @@ def test_engine_remains_paused_after_license_validation_fails(tmp_path):
     assert second[0].message == "Paused: License expired"
     assert len(checks) == 1
     assert not bridge.orders
+
+
+def test_daily_profit_ceiling_halts_without_a_run_target(tmp_path):
+    bridge, db = FakeBridge(), Database(str(tmp_path / "daily-target.db"))
+    db.insert_trade(1, "EURUSD", "BUY", .1, 1.2, 1.1, 1.3, 1, "", "", "2026-01-05T08:00:00+00:00")
+    db.close_trade(1, 1.3, 25, "2026-01-05T09:00:00+00:00")
+    engine = TradingEngine(
+        bridge, db, RiskEngine(RiskSettings()), StaticStrategy(SignalSide.BUY),
+        TradingConfig(symbol="EURUSD", daily_profit_target=20),
+    )
+
+    events = engine.tick(datetime(2026, 1, 5, 12, tzinfo=timezone.utc))
+
+    assert events[0].level == "halt"
+    assert "Daily target reached" in events[0].message
+    assert not bridge.orders
+
+
+def test_position_without_take_profit_is_not_auto_closed(tmp_path):
+    bridge, db = FakeBridge(), Database(str(tmp_path / "no-tp.db"))
+    position = PositionInfo(123, "EURUSD", "BUY", .1, 1.2, 1.1, 0, 5, 20240101)
+    bridge.get_positions = lambda: [position]
+    bridge.close_position = lambda _position: (_ for _ in ()).throw(AssertionError("must not close"))
+    engine = TradingEngine(
+        bridge, db, RiskEngine(RiskSettings()), StaticStrategy(SignalSide.BUY),
+        TradingConfig(symbol="EURUSD"),
+    )
+
+    assert engine._manage_positions(datetime(2026, 1, 5, 12, tzinfo=timezone.utc)) == []

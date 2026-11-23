@@ -10,23 +10,27 @@ Enable MFA on every account before continuing.
 
 ## 2. Provision PostgreSQL
 
-1. Create a production database in a region close to Vercel’s chosen function region.
+1. Create a production database in a region close to the Render API region.
 2. Create a least-privilege database user for MyTradeBot only.
 3. Require TLS and copy the provider’s PostgreSQL connection URL.
 4. Configure automated backups and perform a test restore before launch.
 
-## 3. Deploy licensing API to Vercel
+## 3. Deploy the separate services
+
+Use one private Git repository with three independently deployed components. This keeps shared contracts and releases together while allowing each component to deploy independently:
+
+```text
+Vercel frontend (public PWA)  ->  Render API  ->  PostgreSQL
+Windows MT5 trading agent     ->  Render API  ->  PostgreSQL
+```
 
 1. Push this project to a private Git repository.
-2. Import it into Vercel with the repository root (`./`) as the project root. The root `vercel.json` routes every request to `api/index.py` and explicitly bundles the `backend/` package. Do not select `/api` or `/backend` as a separate project root for this configuration.
-3. Use Python 3.12; `.python-version` pins this version and `pyproject.toml` permits it.
-4. In Vercel Production Environment Variables, enter the required values for your selected production providers. `.env.example` contains placeholders, not usable credentials; never upload it or copy placeholder values as production settings.
-5. Generate `JWT_SECRET`, `LICENSE_SIGNING_SECRET`, and `ADMIN_BOOTSTRAP_TOKEN` separately, each at least 32 random characters.
-6. Set `MYTRADEBOT_ENV=production`, a PostgreSQL `DATABASE_URL`, `PAYMENT_PROVIDER=mpesa_daraja`, `MPESA_ENVIRONMENT=production`, exact allowed CORS origins, and `SMS_PROVIDER=africastalking` with its private username and API key. Enter all Daraja credentials, the HTTPS callback URL/token, and KES prices privately in the deployment settings.
-7. Deploy. Confirm `https://YOUR-VERCEL-PROJECT.vercel.app/health` reports `{"status":"ok"}`.
-8. Register the configured `ADMIN_EMAIL` as the first administrator, sending `ADMIN_BOOTSTRAP_TOKEN` in the `X-Admin-Bootstrap-Token` header over HTTPS. Keep the token private.
+2. Create the **Render API** with `apps/backend` as its project root. Set its `sync: false` values privately: PostgreSQL `DATABASE_URL`, `JWT_SECRET`, `LICENSE_SIGNING_SECRET`, `ADMIN_BOOTSTRAP_TOKEN`, Africa's Talking credentials, and any future payment credentials. Confirm `https://YOUR-RENDER-API/health` returns `{"status":"ok"}`.
+3. Create the **Vercel frontend** with `apps/frontend` as its project root. It publishes only `public`; it does not deploy the API. Set only `MYTRADEBOT_API_URL=https://YOUR-RENDER-API` in Vercel. This is a public endpoint URL, not a secret.
+4. Open `https://YOUR-VERCEL-SITE/config.js` and confirm it returns the configured Render API URL. Set Render's `ALLOWED_ORIGINS` to the exact Vercel URL, then redeploy Render.
+5. Register the configured `ADMIN_EMAIL` through the Render API, sending `ADMIN_BOOTSTRAP_TOKEN` in the `X-Admin-Bootstrap-Token` header over HTTPS. Keep the token private.
 
-The backend serves an installable account portal at `/`. Phone OTP uses Africa's Talking; use HTTPS for deployment. Email receipts and account recovery remain unavailable until an email provider is implemented and configured. The PWA does not relay commands to the Windows trading app. Paid checkout is intentionally disabled in code (`PAID_PLANS_ENABLED=False`), and the Daraja callback flow has not been verified against Safaricom's sandbox. Do not accept payments or market paid access until the remote-PC relay, promised plan features, email, billing, callback verification, renewal/expiry, and staging tests are complete. Do not expose the unauthenticated localhost trading dashboard to the internet.
+The public PWA is an account and subscription portal only. It never has access to MT5 or broker credentials, and it does not relay bot commands. The Windows agent remains local-only. Do not expose the local trading controller to the internet.
 
 ## 4. Configure payments
 
@@ -48,10 +52,11 @@ This flow has not yet been verified in Daraja sandbox or production. `PAID_PLANS
 
 ## 5. Attach your domain
 
-1. In Vercel, add `licenses.yourdomain.com` under **Settings → Domains**.
-2. Add the DNS record Vercel requests at your registrar.
-3. Wait for Vercel TLS provisioning, then verify `/health` on the custom domain.
-4. In the desktop app set **Strategy & Risk → Subscription → License API** to `https://licenses.yourdomain.com`.
+1. In Render, add `api.yourdomain.com` under the service's custom-domain settings.
+2. In Vercel, add `app.yourdomain.com` under **Settings → Domains**.
+3. Add the DNS records each provider requests and wait for TLS provisioning.
+4. Verify `https://api.yourdomain.com/health`, set Vercel `MYTRADEBOT_API_URL=https://api.yourdomain.com`, then set Render `ALLOWED_ORIGINS=https://app.yourdomain.com`.
+5. In the desktop app set **Strategy & Risk → Subscription → License API** to `https://api.yourdomain.com`.
 
 ## 6. Build and sign the Windows desktop application
 
