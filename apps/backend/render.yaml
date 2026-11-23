@@ -1,0 +1,57 @@
+services:
+  - type: web
+    name: mytradebot-api
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: MYTRADEBOT_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: LICENSE_SIGNING_SECRET
+        generateValue: true
+      - key: ADMIN_BOOTSTRAP_TOKEN
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: DEVELOPER_EMAIL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: SMS_PROVIDER
+        value: africastalking
+      - key: AFRICASTALKING_USERNAME
+        sync: false
+      - key: AFRICASTALKING_API_KEY
+        sync: false
+      - key: PAYMENT_PROVIDER
+        value: mpesa_daraja
+      - key: PAID_PLANS_ENABLED
+        value: "false"
+      - key: MPESA_ENVIRONMENT
+        value: production
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_SHORTCODE
+        sync: false
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_CALLBACK_TOKEN
+        sync: false
+      - key: MPESA_CALLBACK_URL
+        sync: false
+      - key: MPESA_PRICE_PRO_KES
+        sync: false
+      - key: MPESA_PRICE_ULTIMATE_KES
+        sync: false
+      - key: MPESA_PRICE_PLATINUM_KES
+        sync: false

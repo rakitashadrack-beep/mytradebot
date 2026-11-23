@@ -11,7 +11,6 @@ import secrets
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Generator, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -21,7 +20,8 @@ from uuid import uuid4
 import bcrypt
 import jwt
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from backend.plans import (
@@ -361,6 +361,15 @@ def create_app(
     settings = settings or Settings()
     database = database or Database(settings.database_url)
     app = FastAPI(title="MyTradeBot Licensing API", version="0.1.0")
+    origins = [origin.strip() for origin in settings.allowed_origins.split(",") if origin.strip()]
+    if origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type"],
+        )
     limiter = RateLimiter(settings.rate_limit_per_minute)
     phone_limiter = RateLimiter(3)
     payment_provider = _payment_provider(settings)
@@ -447,42 +456,9 @@ def create_app(
         database.one("SELECT 1")
         return {"status": "ok"}
 
-    @app.get("/", response_class=HTMLResponse)
-    def portal():
-        return FileResponse(
-            Path(__file__).parent / "static" / "index.html",
-            media_type="text/html",
-        )
-
-    @app.get("/manifest.webmanifest")
-    def pwa_manifest():
-        return FileResponse(
-            Path(__file__).parent / "static" / "manifest.webmanifest",
-            media_type="application/manifest+json",
-        )
-
-    @app.get("/icon.svg")
-    def pwa_icon():
-        return FileResponse(
-            Path(__file__).parent / "static" / "icon.svg",
-            media_type="image/svg+xml",
-        )
-
-    @app.get("/favicon.ico")
-    def favicon():
-        return FileResponse(
-            Path(__file__).parent / "static" / "icon.svg",
-            media_type="image/svg+xml",
-            headers={"Cache-Control": "public, max-age=604800"},
-        )
-
-    @app.get("/service-worker.js")
-    def pwa_service_worker():
-        return FileResponse(
-            Path(__file__).parent / "static" / "service-worker.js",
-            media_type="application/javascript",
-            headers={"Cache-Control": "no-cache"},
-        )
+    @app.get("/")
+    def service_info():
+        return {"service": "MyTradeBot Licensing API", "docs": "/docs"}
 
     @app.get("/plans")
     def get_plans():
