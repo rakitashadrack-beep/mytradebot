@@ -687,7 +687,7 @@ body {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 <script>
-const ACCOUNT_API = '/account-api';
+const ACCOUNT_API = {{ account_api_url | tojson }};
 let accountAccessToken = null;
 let accountMode = 'login';
 let activeAccount = null;

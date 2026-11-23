@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_DOWN
 from enum import Enum
+from math import isfinite
 
 
 class LotSizeMode(str, Enum):
@@ -32,6 +33,14 @@ class RiskSettings:
     minimum_free_margin: float = 100.0
 
     def validate(self) -> None:
+        numeric_values = (
+            self.fixed_lot, self.risk_percent_per_trade,
+            self.max_daily_loss_percent, self.max_drawdown_percent,
+            self.max_weekly_loss_percent, self.max_spread_points,
+            self.minimum_free_margin,
+        )
+        if not all(isfinite(value) for value in numeric_values):
+            raise ValueError("risk settings must be finite numbers")
         if self.fixed_lot <= 0:
             raise ValueError("fixed_lot must be greater than zero")
         if not 0 < self.risk_percent_per_trade <= 100:
@@ -63,6 +72,11 @@ class SymbolConstraints:
     tick_size: float
 
     def validate(self) -> None:
+        if not all(isfinite(value) for value in (
+            self.point, self.volume_min, self.volume_max, self.volume_step,
+            self.tick_value, self.tick_size,
+        )):
+            raise ValueError("symbol constraints must be finite numbers")
         if self.point <= 0 or self.volume_min <= 0 or self.volume_max < self.volume_min:
             raise ValueError("symbol has invalid price or volume limits")
         if self.volume_step <= 0 or self.tick_value <= 0 or self.tick_size <= 0:
@@ -143,6 +157,17 @@ class RiskEngine:
     def evaluate(self, snapshot: RiskSnapshot, stop_distance_points: float,
                  constraints: SymbolConstraints, estimated_margin: float) -> RiskDecision:
         """Return the first blocking reason, or an approved normalized volume."""
+        values = (
+            snapshot.balance, snapshot.equity, snapshot.free_margin,
+            snapshot.daily_realized_pnl, snapshot.weekly_realized_pnl,
+            snapshot.peak_balance, snapshot.spread_points,
+            stop_distance_points, estimated_margin,
+        )
+        if not all(isfinite(value) for value in values):
+            return RiskDecision(False, "Broker or risk data is not finite")
+        if (snapshot.seconds_since_last_trade is not None and
+                not isfinite(snapshot.seconds_since_last_trade)):
+            return RiskDecision(False, "Last-trade timing data is not finite")
         if snapshot.balance <= 0 or snapshot.equity < 0:
             return RiskDecision(False, "Account balance or equity is invalid")
         if snapshot.open_positions >= self.settings.max_open_positions:

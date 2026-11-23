@@ -3,13 +3,13 @@ import os
 import secrets
 import threading
 import webbrowser
-from pathlib import Path
 
 import uvicorn
+from core.runtime import local_env_file
 
 
 def load_local_environment() -> None:
-    env_path = Path(__file__).with_name(".env")
+    env_path = local_env_file()
     if env_path.is_file():
         for line in env_path.read_text(encoding="utf-8").splitlines():
             stripped = line.strip()

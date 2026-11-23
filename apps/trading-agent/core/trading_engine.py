@@ -180,17 +180,17 @@ class TradingEngine:
 
     def _check_run_target(self, now: datetime) -> EngineEvent | None:
         """Halt the bot when the per-run profit target is reached."""
-        if self.config.run_profit_target <= 0 or self._run_start is None:
-            return None
-        run_profit = self.database.realized_profit_between(
-            self._run_start.isoformat(), now.isoformat()
-        )
-        if run_profit >= self.config.run_profit_target:
-            return EngineEvent(
-                "halt",
-                f"Run target reached: +{run_profit:.2f} >= {self.config.run_profit_target:.2f} — bot stopped",
+        if self.config.run_profit_target > 0 and self._run_start is not None:
+            run_profit = self.database.realized_profit_between(
+                self._run_start.isoformat(), now.isoformat()
             )
-        # Also check daily ceiling
+            if run_profit >= self.config.run_profit_target:
+                return EngineEvent(
+                    "halt",
+                    f"Run target reached: +{run_profit:.2f} >= {self.config.run_profit_target:.2f} — bot stopped",
+                )
+
+        # This is independent of the optional per-run target.
         if self.config.daily_profit_target > 0:
             day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             daily = self.database.realized_profit_between(day_start.isoformat(), now.isoformat())
@@ -205,18 +205,20 @@ class TradingEngine:
         """Record closed positions that MT5 has already closed (TP/SL hit)."""
         events: list[EngineEvent] = []
         for position in self.bridge.get_positions():
+            # A zero TP means this position is not eligible for this optional
+            # profit-target exit. Never turn a missing TP into an immediate exit.
+            if position.tp <= 0:
+                continue
             tick = self.bridge.get_tick(position.symbol)
             if tick is None:
                 continue
-            # Only close if price has reached the TP level
-            if position.tp > 0:
-                current_price = tick.bid if position.order_type == "BUY" else tick.ask
-                tp_hit = (
-                    (position.order_type == "BUY" and current_price >= position.tp)
-                    or (position.order_type == "SELL" and current_price <= position.tp)
-                )
-                if not tp_hit:
-                    continue
+            current_price = tick.bid if position.order_type == "BUY" else tick.ask
+            tp_hit = (
+                (position.order_type == "BUY" and current_price >= position.tp)
+                or (position.order_type == "SELL" and current_price <= position.tp)
+            )
+            if not tp_hit:
+                continue
             result = self.bridge.close_position(position)
             if not result.success:
                 events.append(EngineEvent("error", f"Close failed ticket={position.ticket}: {result.message}"))

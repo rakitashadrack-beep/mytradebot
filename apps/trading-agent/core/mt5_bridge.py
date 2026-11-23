@@ -7,6 +7,7 @@ which we catch so the rest of the app (UI, tests) can still import this module.
 from __future__ import annotations
 from dataclasses import dataclass
 from functools import wraps
+from math import isfinite
 from threading import RLock
 
 from core.logger import get_logger
@@ -260,9 +261,21 @@ class MT5Bridge:
         if tick is None:
             return TradeResult(False, message="Could not get tick data")
 
+        if not all(isfinite(float(value)) for value in (volume, sl, tp, tick.ask, tick.bid)):
+            return TradeResult(False, message="Order contains invalid numeric values")
+        if volume <= 0 or sl <= 0 or tp <= 0:
+            return TradeResult(False, message="Every automated order requires positive volume, stop loss, and take profit")
+
         filling  = self._get_filling_mode(sym_info)
         mt5_type = mt5.ORDER_TYPE_BUY  if order_type == OrderType.BUY else mt5.ORDER_TYPE_SELL
         price    = tick.ask            if order_type == OrderType.BUY else tick.bid
+        digits = max(0, int(getattr(sym_info, "digits", 0)))
+        price, sl, tp = (round(value, digits) for value in (price, sl, tp))
+        if not self.validate_entry_levels(symbol, price, sl, tp):
+            return TradeResult(False, message="Stop loss or take profit violates current broker stop/freeze levels")
+        if ((order_type == OrderType.BUY and not (sl < price < tp)) or
+                (order_type == OrderType.SELL and not (tp < price < sl))):
+            return TradeResult(False, message="Stop loss or take profit is on the wrong side of the current price")
 
         request = {
             "action":       mt5.TRADE_ACTION_DEAL,
@@ -281,6 +294,18 @@ class MT5Bridge:
 
         log.info("Placing %s %s vol=%.2f price=%.5f sl=%.5f tp=%.5f",
                  order_type.value, symbol, volume, price, sl, tp)
+        # Ask the terminal to validate funds and broker rules immediately before
+        # sending. This reduces stale-price and margin surprises; order_send is
+        # still authoritative because the market may change after this check.
+        check = mt5.order_check(request)
+        if check is None or getattr(check, "retcode", None) not in {
+            0, mt5.TRADE_RETCODE_DONE,
+        }:
+            msg = getattr(check, "comment", None) or mt5.last_error()
+            log.error("Order preflight failed: retcode=%s msg=%s",
+                      getattr(check, "retcode", "?"), msg)
+            return TradeResult(False, retcode=getattr(check, "retcode", -1),
+                               message=f"Broker preflight rejected order: {msg}")
         result = mt5.order_send(request)
 
         if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:

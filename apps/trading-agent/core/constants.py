@@ -4,12 +4,15 @@ Shared constants and enums used across the entire application.
 """
 from enum import Enum
 
+from core.runtime import data_directory
+
 APP_NAME    = "MyTradeBot"
 APP_VERSION = "1.0.0"
 MAGIC_NUMBER   = 20240101   # tags every bot-owned order
 DEFAULT_DEVIATION = 20      # max slippage in points
-LOG_DIR  = "logs"
-DB_PATH  = "mytradebot.db"
+DATA_DIR = data_directory()
+LOG_DIR  = str(DATA_DIR / "logs")
+DB_PATH  = str(DATA_DIR / "mytradebot.db")
 
 RISK_DISCLAIMER = (
     "RISK DISCLAIMER\n\n"

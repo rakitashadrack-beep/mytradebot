@@ -16,7 +16,6 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Streamin
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from backend.app import app as account_api
 from core.database import Database
 from core.licensing import LicenseManager, device_id
 from core.mt5_bridge import MT5Bridge
@@ -29,7 +28,6 @@ BASE = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
 
 app = FastAPI(title="MyTradeBot")
-app.mount("/account-api", account_api)
 
 
 @app.middleware("http")
@@ -58,7 +56,7 @@ async def apply_browser_security_headers(request: Request, call_next):
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
         "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "
         "img-src 'self' data: blob:; "
-        "connect-src 'self' https://cdn.jsdelivr.net; "
+        f"connect-src 'self' https://cdn.jsdelivr.net {REMOTE_ACCOUNT_API_URL}; "
         "object-src 'none'; base-uri 'self'; form-action 'self'; "
         "frame-ancestors 'none'; worker-src 'self'"
     )
@@ -73,12 +71,7 @@ async def apply_browser_security_headers(request: Request, call_next):
 # ── Shared state ──────────────────────────────────────────────────────────────
 bridge = MT5Bridge()
 db = Database()
-LOCAL_ACCOUNT_API_URL = os.getenv(
-    "MYTRADEBOT_LICENSE_API_URL",
-    "http://127.0.0.1:8000/account-api",
-).rstrip("/")
-if not db.get_setting("license_api_url", ""):
-    db.set_setting("license_api_url", LOCAL_ACCOUNT_API_URL)
+REMOTE_ACCOUNT_API_URL = os.getenv("MYTRADEBOT_LICENSE_API_URL", "").strip().rstrip("/")
 _engine: TradingEngine | None = None
 _engine_thread: threading.Thread | None = None
 _engine_stop = threading.Event()
@@ -152,7 +145,7 @@ async def index(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={},
+        context={"account_api_url": REMOTE_ACCOUNT_API_URL},
     )
 
 
@@ -428,7 +421,7 @@ def get_performance():
 def get_settings():
     d = RiskSettings()
     settings = {n: db.get_setting(n, getattr(d, n)) for n in RiskSettings.__dataclass_fields__}
-    settings["license_api_url"] = db.get_setting("license_api_url", LOCAL_ACCOUNT_API_URL)
+    settings["license_api_url"] = db.get_setting("license_api_url", REMOTE_ACCOUNT_API_URL)
     return settings
 
 
@@ -470,7 +463,7 @@ def save_settings(req: SettingsSaveRequest):
         return {"ok": False, "error": "Use HTTPS for remote licensing services."}
     for k, v in risk_values.items():
         db.set_setting(k, v)
-    db.set_setting("license_api_url", license_api_url or LOCAL_ACCOUNT_API_URL)
+    db.set_setting("license_api_url", license_api_url or REMOTE_ACCOUNT_API_URL)
     return {"ok": True}
 
 
