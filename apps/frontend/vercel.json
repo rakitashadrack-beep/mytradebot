@@ -1,13 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "public",
   "functions": {
     "api/index.py": {
-      "includeFiles": "backend/**"
+      "includeFiles": ["api/index.py"]
     }
   },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/config.js",
       "destination": "/api/index"
     }
   ]

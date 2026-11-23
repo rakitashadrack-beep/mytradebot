@@ -155,9 +155,12 @@
 
   <button id="install-btn" class="hidden" type="button">Install app</button>
 
+  <script src="/config.js"></script>
   <script>
     let accessToken = null;
     let installPrompt = null;
+    const API_BASE = (window.MYTRADEBOT_API_URL || "").replace(/\/$/, "");
+    const apiUrl = path => `${API_BASE}${path}`;
     const $ = id => document.getElementById(id);
     const msg = (text, err) => {
       $("login-message").textContent = text;
@@ -174,14 +177,14 @@
       const password = $("password").value;
       try {
         // Try login first; if 404 (account doesn't exist yet) try register
-        let response = await fetch("/auth/login", {
+        let response = await fetch(apiUrl("/auth/login"), {
           method: "POST",
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({email, password})
         });
         if (response.status === 401) {
           // Wrong password or account doesn't exist — try register (first-time setup)
-          const reg = await fetch("/auth/register", {
+          const reg = await fetch(apiUrl("/auth/register"), {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({email, password})
@@ -211,10 +214,10 @@
 
     // ── Workspace ─────────────────────────────────────────────────────────────
     async function loadWorkspace() {
-      const r = await fetch("/account", {headers: {Authorization: `Bearer ${accessToken}`}});
+      const r = await fetch(apiUrl("/account"), {headers: {Authorization: `Bearer ${accessToken}`}});
       if (!r.ok) { accessToken = null; throw new Error("Session expired."); }
       const data = await r.json();
-      const billing = await fetch("/billing/availability").then(r => r.json()).catch(() => ({}));
+      const billing = await fetch(apiUrl("/billing/availability")).then(r => r.json()).catch(() => ({}));
 
       // Identity
       $("identity").replaceChildren();
@@ -237,7 +240,7 @@
 
     // ── Admin dashboard ───────────────────────────────────────────────────────
     async function loadAdminDashboard() {
-      const r = await fetch("/admin/dashboard/json", {headers: {Authorization: `Bearer ${accessToken}`}});
+      const r = await fetch(apiUrl("/admin/dashboard/json"), {headers: {Authorization: `Bearer ${accessToken}`}});
       if (!r.ok) return;
       const data = await r.json();
 
@@ -300,7 +303,7 @@
     async function revokeSubscription(id) {
       const reason = prompt("Reason for revoking:");
       if (!reason || reason.trim().length < 3) return;
-      const r = await fetch(`/admin/subscriptions/${encodeURIComponent(id)}/revoke`, {
+      const r = await fetch(apiUrl(`/admin/subscriptions/${encodeURIComponent(id)}/revoke`), {
         method: "POST",
         headers: {"Content-Type": "application/json", Authorization: `Bearer ${accessToken}`},
         body: JSON.stringify({reason: reason.trim()})
